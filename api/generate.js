@@ -40,7 +40,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURlComponent(apikey)}`
     const geminiBody = {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
