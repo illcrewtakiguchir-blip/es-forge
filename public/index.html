@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ES Forge — ガクチカ生成ツール</title>
+<meta name="description" content="就活生向けガクチカES自動生成ツール。論理一貫性を担保した200/400/600/800字を同時生成。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Noto+Serif+JP:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f1ea;
+  --bg-paper: #faf8f3;
+  --ink: #1a1a1a;
+  --ink-soft: #3d3d3d;
+  --ink-mute: #757067;
+  --rule: #d8d2c4;
+  --accent: #8b1e1e;
+  --gold: #a8893a;
+  --shadow: 0 1px 0 rgba(26,26,26,0.04), 0 8px 24px rgba(26,26,26,0.06);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+body {
+  background:
+    radial-gradient(ellipse at top left, rgba(168,137,58,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(139,30,30,0.03) 0%, transparent 50%),
+    var(--bg);
+}
+.app { max-width: 920px; margin: 0 auto; padding: 48px 32px 96px; }
+
+.masthead {
+  border-top: 3px double var(--ink);
+  border-bottom: 1px solid var(--ink);
+  padding: 24px 0 16px;
+  margin-bottom: 40px;
+  position: relative;
+}
+.masthead::before {
+  content: "ESTABLISHED 2026 · 就職活動支援";
+  position: absolute;
+  top: -10px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg);
+  padding: 0 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--ink-mute);
+}
+.masthead-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+  font-size: 64px;
+  line-height: 1;
+  text-align: center;
+  letter-spacing: -0.02em;
+  font-style: italic;
+}
+.masthead-title .amp { color: var(--accent); font-weight: 500; }
+.masthead-sub {
+  font-family: 'Noto Serif JP', serif;
+  text-align: center;
+  margin-top: 12px;
+  font-size: 13px;
+  letter-spacing: 0.4em;
+  color: var(--ink-soft);
+}
+.masthead-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+}
+
+.stepper {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+}
+.step-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  padding: 8px 14px;
+  color: var(--ink-mute);
+  border-bottom: 2px solid transparent;
+  transition: all 0.3s;
+  text-transform: uppercase;
+}
+.step-pill.active { color: var(--accent); border-bottom-color: var(--accent); }
+.step-pill.done { color: var(--ink); }
+.step-pill.done::before { content: "✓ "; color: var(--gold); }
+
+.stage {
+  background: var(--bg-paper);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow);
+  padding: 48px 56px;
+  position: relative;
+}
+.stage::before {
+  content: "";
+  position: absolute;
+  top: 8px; right: 8px; bottom: 8px; left: 8px;
+  border: 1px solid var(--rule);
+  pointer-events: none;
+}
+
+.stage-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+.stage-title {
+  font-family: 'Noto Serif JP', serif;
+  font-weight: 600;
+  font-size: 26px;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+.stage-desc {
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin-bottom: 32px;
+  line-height: 1.8;
+  border-bottom: 1px dotted var(--rule);
+  padding-bottom: 20px;
+}
+
+.option-grid { display: grid; gap: 12px; margin-bottom: 16px; }
+.opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.opt:hover { border-color: var(--ink-soft); transform: translateX(2px); }
+.opt.selected { background: var(--ink); color: var(--bg-paper); border-color: var(--ink); }
+.opt.selected .opt-num { color: var(--gold); }
+.opt.selected .opt-desc { color: rgba(250,248,243,0.7); }
+.opt-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1;
+  padding-top: 2px;
+  min-width: 32px;
+}
+.opt-body { flex: 1; }
+.opt-label {
+  font-family: 'Noto Serif JP', serif;
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+.opt-desc { font-size: 12px; color: var(--ink-mute); line-height: 1.6; }
+
+.field { margin-bottom: 20px; }
+.field-label {
+  display: block;
+  font-family: 'Noto Serif JP', serif;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.field-hint { font-size: 12px; color: var(--ink-mute); margin-bottom: 8px; font-style: italic; }
+.field input[type="text"],
+.field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+  resize: vertical;
+}
+.field input:focus, .field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: #fff;
+}
+.field textarea { min-height: 80px; }
+
+.subseg {
+  background: rgba(168,137,58,0.06);
+  border-left: 3px solid var(--gold);
+  padding: 14px 18px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.subseg-title {
+  font-family: 'Noto Serif JP', serif;
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rule);
+}
+.btn {
+  font-family: 'Noto Serif JP', serif;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 14px 28px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.2s;
+}
+.btn:hover { background: var(--ink); color: var(--bg-paper); }
+.btn-primary { background: var(--ink); color: var(--bg-paper); }
+.btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled:hover { background: transparent; color: var(--ink); }
+.btn-icon { font-family: 'Cormorant Garamond', serif; font-style: italic; margin: 0 4px; }
+
+.result-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--ink);
+}
+.tab {
+  flex: 1;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-family: 'Noto Serif JP', serif;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ink-mute);
+  letter-spacing: 0.05em;
+  transition: all 0.2s;
+}
+.tab:hover { color: var(--ink); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab.error { color: var(--accent); }
+.tab .tab-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 18px;
+  display: block;
+  line-height: 1;
+}
+.tab .tab-label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  margin-top: 4px;
+  display: block;
+}
+
+.skeleton-box {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+.skeleton-box summary {
+  font-family: 'Noto Serif JP', serif;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.skeleton-row {
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px dotted var(--rule);
+  font-size: 13px;
+}
+.skeleton-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--ink-mute);
+  min-width: 64px;
+  padding-top: 4px;
+  text-transform: uppercase;
+}
+.skeleton-value { flex: 1; line-height: 1.7; }
+
+.result-card {
+  background: var(--bg-paper);
+  border: 1px solid var(--rule);
+  padding: 32px 36px;
+  position: relative;
+}
+.result-card::before {
+  content: "DRAFT";
+  position: absolute;
+  top: 18px; right: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+  padding: 3px 8px;
+}
+.result-meta {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px dotted var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  flex-wrap: wrap;
+}
+.result-meta strong { color: var(--ink); }
+.result-body {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 15px;
+  line-height: 2;
+  color: var(--ink);
+  white-space: pre-wrap;
+  letter-spacing: 0.02em;
+}
+.result-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.btn-small {
+  padding: 8px 16px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  transition: all 0.2s;
+}
+.btn-small:hover { background: var(--ink); color: var(--bg-paper); border-color: var(--ink); }
+.btn-small:disabled { opacity: 0.4; cursor: not-allowed; }
+.copied { background: var(--gold) !important; color: white !important; border-color: var(--gold) !important; }
+
+.loader { text-align: center; padding: 40px 20px; }
+.loader-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+.loader-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+}
+.loader-bar {
+  width: 200px;
+  height: 1px;
+  background: var(--rule);
+  margin: 24px auto;
+  position: relative;
+  overflow: hidden;
+}
+.loader-bar::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -50%;
+  width: 50%;
+  height: 100%;
+  background: var(--accent);
+  animation: slide 1.4s infinite;
+}
+@keyframes slide { to { left: 100%; } }
+.loader-status {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.loader-pill {
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  background: var(--bg);
+  letter-spacing: 0.1em;
+}
+.loader-pill.loading { color: var(--accent); border-color: var(--accent); }
+.loader-pill.done { color: #2d8659; border-color: #2d8659; }
+.loader-pill.error { color: var(--accent); background: rgba(139,30,30,0.08); border-color: var(--accent); }
+
+.error-msg {
+  background: rgba(139,30,30,0.06);
+  border-left: 3px solid var(--accent);
+  padding: 14px 18px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--accent);
+  white-space: pre-wrap;
+}
+.footer {
+  text-align: center;
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+}
+
+@media (max-width: 720px) {
+  .app { padding: 24px 16px 64px; }
+  .masthead-title { font-size: 42px; }
+  .stage { padding: 28px 22px; }
+  .stage::before { inset: 4px; }
+  .actions { flex-direction: column-reverse; }
+  .btn { width: 100%; }
+  .tab { padding: 10px 8px; }
+  .result-card { padding: 22px 18px; }
+}
+.reveal { animation: reveal 0.5s ease both; }
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="masthead">
+    <h1 class="masthead-title">ES <span class="amp">&amp;</span> Forge</h1>
+    <div class="masthead-sub">ガ ク チ カ 鍛 造 ツ ー ル</div>
+    <div class="masthead-meta">
+      <span>VOL. 03</span>
+      <span>FOR JOB SEEKERS</span>
+      <span>200 / 400 / 600 / 800</span>
+    </div>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <div class="step-pill active" data-step="1">01 業界</div>
+    <div class="step-pill" data-step="2">02 経験</div>
+    <div class="step-pill" data-step="3">03 成果</div>
+    <div class="step-pill" data-step="4">04 内容</div>
+    <div class="step-pill" data-step="5">05 生成</div>
+  </nav>
+
+  <main id="stages">
+
+    <section class="stage reveal" data-stage="1">
+      <div class="stage-num">— STAGE I —</div>
+      <h2 class="stage-title">提出先企業の業界を選ぶ</h2>
+      <p class="stage-desc">業界によって評価される人物像と文体が変わります。最も近いものを一つ選んでください。複数業界に出すなら「業界問わず汎用」を推奨。</p>
+      <div class="option-grid" id="industryOptions">
+        <div class="opt" data-value="consulting"><div class="opt-num">i</div><div class="opt-body"><div class="opt-label">コンサル・金融・商社</div><div class="opt-desc">論理性・構造化思考・知的タフネスが評価軸。地頭と打ち手の精度を強調。</div></div></div>
+        <div class="opt" data-value="agency"><div class="opt-num">ii</div><div class="opt-body"><div class="opt-label">広告・マスコミ・人材</div><div class="opt-desc">人柄＋論理。共感力・巻き込み力・本質を捉えるセンスを重視。</div></div></div>
+        <div class="opt" data-value="maker"><div class="opt-num">iii</div><div class="opt-body"><div class="opt-label">メーカー・インフラ</div><div class="opt-desc">堅実さ・誠実さ・継続性。地に足のついた取り組みと協調性を強調。</div></div></div>
+        <div class="opt" data-value="venture"><div class="opt-num">iv</div><div class="opt-body"><div class="opt-label">ベンチャー・IT</div><div class="opt-desc">推進力・成果志向・自走力。スピードとオーナーシップを前面に。</div></div></div>
+        <div class="opt" data-value="general"><div class="opt-num">v</div><div class="opt-body"><div class="opt-label">業界問わず汎用</div><div class="opt-desc">標準的な文体。複数業界併願者に推奨。</div></div></div>
+      </div>
+      <div class="actions">
+        <span></span>
+        <button class="btn btn-primary" data-next="2" disabled>次へ <span class="btn-icon">→</span></button>
+      </div>
+    </section>
+
+    <section class="stage" data-stage="2" style="display:none;">
+      <div class="stage-num">— STAGE II —</div>
+      <h2 class="stage-title">ガクチカで使う経験カテゴリ</h2>
+      <p class="stage-desc">最も成果や学びが大きかった経験を選んでください。</p>
+      <div class="option-grid" id="categoryOptions">
+        <div class="opt" data-value="intern"><div class="opt-num">i</div><div class="opt-body"><div class="opt-label">長期インターン・ビジネス</div><div class="opt-desc">企業での実務経験、自身の事業、起業活動など</div></div></div>
+        <div class="opt" data-value="parttime"><div class="opt-num">ii</div><div class="opt-body"><div class="opt-label">アルバイト</div><div class="opt-desc">飲食・小売・塾講師など、業務改善や顧客対応の経験</div></div></div>
+        <div class="opt" data-value="circle"><div class="opt-num">iii</div><div class="opt-body"><div class="opt-label">サークル・部活動</div><div class="opt-desc">運営・大会・組織変革などの集団活動経験</div></div></div>
+        <div class="opt" data-value="academic"><div class="opt-num">iv</div><div class="opt-body"><div class="opt-label">学業・研究・ゼミ</div><div class="opt-desc">研究プロジェクト、ゼミ活動、学術成果など</div></div></div>
+        <div class="opt" data-value="other"><div class="opt-num">v</div><div class="opt-body"><div class="opt-label">その他</div><div class="opt-desc">ボランティア、留学、資格など</div></div></div>
+      </div>
+      <div class="actions">
+        <button class="btn" data-back="1"><span class="btn-icon">←</span> 戻る</button>
+        <button class="btn btn-primary" data-next="3" disabled>次へ <span class="btn-icon">→</span></button>
+      </div>
+    </section>
+
+    <section class="stage" data-stage="3" style="display:none;">
+      <div class="stage-num">— STAGE III —</div>
+      <h2 class="stage-title">あなたの「成果」のタイプは</h2>
+      <p class="stage-desc">嘘・誇張にならない形で最大限の見せ方を選びます。</p>
+      <div class="option-grid" id="resultOptions">
+        <div class="opt" data-value="A"><div class="opt-num">A</div><div class="opt-body"><div class="opt-label">明確な数値成果がある</div><div class="opt-desc">売上◯%向上、順位◯位、参加者◯人増など</div></div></div>
+        <div class="opt" data-value="B"><div class="opt-num">B</div><div class="opt-body"><div class="opt-label">定性的な成果がある</div><div class="opt-desc">仕組みを作った、組織を変えた、評価を得たなど</div></div></div>
+        <div class="opt" data-value="C"><div class="opt-num">C</div><div class="opt-body"><div class="opt-label">成果はこれから・継続中</div><div class="opt-desc">取り組み姿勢とプロセス、得た学びを軸に構成</div></div></div>
+        <div class="opt" data-value="D"><div class="opt-num">D</div><div class="opt-body"><div class="opt-label">成果はあるが、誇張に感じて不安</div><div class="opt-desc">面接で詰められても答えられる範囲のみで、プロセス重視構成</div></div></div>
+        <div class="opt" data-value="E"><div class="opt-num">E</div><div class="opt-body"><div class="opt-label">成果が思いつかない</div><div class="opt-desc">経験内容からAIが控えめな成果像を補完</div></div></div>
+      </div>
+      <div class="actions">
+        <button class="btn" data-back="2"><span class="btn-icon">←</span> 戻る</button>
+        <button class="btn btn-primary" data-next="4" disabled>次へ <span class="btn-icon">→</span></button>
+      </div>
+    </section>
+
+    <section class="stage" data-stage="4" style="display:none;">
+      <div class="stage-num">— STAGE IV —</div>
+      <h2 class="stage-title">構成要素を入力する</h2>
+      <p class="stage-desc">わかる範囲で。空欄はAIが因果が通るよう補完します。「結論」または「施策」のいずれかは入力してください。</p>
+
+      <div class="field">
+        <label class="field-label">一つ目：何をしたか（結論）</label>
+        <p class="field-hint">例：広告代理店の長期インターンで新規クライアントの運用を担当した</p>
+        <textarea id="f-conclusion" placeholder="経験の概要を1〜2文で..."></textarea>
+      </div>
+      <div class="field">
+        <label class="field-label">二つ目：なぜ始めたか（動機）</label>
+        <p class="field-hint">例：実務で成果を出せる人材になりたかった</p>
+        <textarea id="f-motivation" placeholder="その経験を始めたきっかけ・思い..."></textarea>
+      </div>
+      <div class="field">
+        <label class="field-label">三つ目：何を目指したか（目標）</label>
+        <p class="field-hint">例：CPA30%改善 / 大会全国ベスト8 / 来店客数月100名増 など</p>
+        <textarea id="f-goal" placeholder="その経験で掲げた目標..."></textarea>
+      </div>
+      <div class="field">
+        <label class="field-label">四つ目：理想と現状のギャップ（課題）</label>
+        <p class="field-hint">例：着任時のCPAは目標比1.5倍で乖離していた</p>
+        <textarea id="f-gap" placeholder="目標と現状の差..."></textarea>
+      </div>
+      <div class="field">
+        <label class="field-label">五つ目：その課題を生んだ原因</label>
+        <p class="field-hint">例：勝ちパターンが整理されておらず特定できなかった</p>
+        <textarea id="f-cause" placeholder="課題の根本原因..."></textarea>
+      </div>
+      <div class="field">
+        <label class="field-label">六つ目：原因への打ち手（施策）</label>
+        <p class="field-hint">例：訴求軸×表現軸でクリエイティブを分類しA/Bテスト設計、週次で横展開</p>
+        <textarea id="f-action" placeholder="具体的に取った行動..."></textarea>
+      </div>
+      <div class="field" id="resultField">
+        <label class="field-label" id="resultLabel">七つ目：結果と学び</label>
+        <p class="field-hint">例：CPA35%改善、月次予算1.8倍に拡大。要因を構造化し検証する力を得た</p>
+        <textarea id="f-result" placeholder="得られた結果と学び..."></textarea>
+      </div>
+
+      <div class="subseg" id="segmentNote"></div>
+
+      <div class="field" style="margin-top: 24px;">
+        <label class="field-label">補足：強調したい強み（任意）</label>
+        <p class="field-hint">例：論理的思考力／巻き込み力／継続力／構造化／再現性</p>
+        <input type="text" id="f-strength" placeholder="伝えたい強みのキーワード">
+      </div>
+
+      <div class="actions">
+        <button class="btn" data-back="3"><span class="btn-icon">←</span> 戻る</button>
+        <button class="btn btn-primary" id="generateBtn">ESを生成する <span class="btn-icon">→</span></button>
+      </div>
+    </section>
+
+    <section class="stage" data-stage="5" style="display:none;">
+      <div class="stage-num">— STAGE V —</div>
+      <h2 class="stage-title">生成されたES</h2>
+      <p class="stage-desc">論理骨子を作ってから4文字数に展開します。因果一貫性を担保した上で、200／400／600／800字を同時生成。</p>
+
+      <div class="loader" id="loader" style="display:none;">
+        <div class="loader-text">forging your ES…</div>
+        <div class="loader-bar"></div>
+        <div class="loader-sub">Stage 1: 論理骨子 → Stage 2: 4文字数に並列展開</div>
+        <div class="loader-status" id="loaderStatus">
+          <span class="loader-pill loading" id="ls-skeleton">骨子生成中</span>
+          <span class="loader-pill" id="ls-200">200字</span>
+          <span class="loader-pill" id="ls-400">400字</span>
+          <span class="loader-pill" id="ls-600">600字</span>
+          <span class="loader-pill" id="ls-800">800字</span>
+        </div>
+      </div>
+
+      <div id="errorMsg" class="error-msg" style="display:none;"></div>
+
+      <div id="resultContent" style="display:none;">
+        <details class="skeleton-box" id="skeletonBox">
+          <summary>論理骨子（生成の元になった因果構造）</summary>
+          <div id="skeletonContent" style="margin-top:12px;"></div>
+        </details>
+
+        <div class="result-tabs" id="resultTabs">
+          <button class="tab active" data-tab="200"><span class="tab-num">200</span><span class="tab-label" id="lbl-200">SHORT</span></button>
+          <button class="tab" data-tab="400"><span class="tab-num">400</span><span class="tab-label" id="lbl-400">STANDARD</span></button>
+          <button class="tab" data-tab="600"><span class="tab-num">600</span><span class="tab-label" id="lbl-600">LONG</span></button>
+          <button class="tab" data-tab="800"><span class="tab-num">800</span><span class="tab-label" id="lbl-800">FULL</span></button>
+        </div>
+
+        <div class="result-card">
+          <div class="result-meta">
+            <div>FORMAT: <strong id="metaFormat">200字</strong></div>
+            <div>COUNT: <strong id="metaCount">—</strong></div>
+            <div>業界: <strong id="metaIndustry">—</strong></div>
+          </div>
+          <div class="result-body" id="resultBody">—</div>
+          <div class="result-actions">
+            <button class="btn-small" id="copyBtn">本文をコピー</button>
+            <button class="btn-small" id="regenBtn">この文字数だけ再生成</button>
+            <button class="btn-small" id="downloadBtn">全4種をテキストでDL</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" data-back="4">← 入力に戻る</button>
+        <button class="btn" id="restartBtn">最初からやり直す</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    ES Forge © 2026 · Powered by Google Gemini · 結論ファースト構成準拠
+  </footer>
+</div>
+
+<script>
+const state = {
+  step: 1, industry: null, category: null, resultType: null,
+  fields: {}, skeleton: null,
+  generated: { 200: null, 400: null, 600: null, 800: null },
+  status: { skeleton: 'pending', 200: 'pending', 400: 'pending', 600: 'pending', 800: 'pending' },
+  activeTab: 200,
+};
+
+const INDUSTRY_LABEL = {
+  consulting: 'コンサル・金融・商社',
+  agency: '広告・マスコミ・人材',
+  maker: 'メーカー・インフラ',
+  venture: 'ベンチャー・IT',
+  general: '業界問わず汎用',
+};
+const INDUSTRY_TONE = {
+  consulting: `【業界特性】論理性・構造化思考・課題解決能力を最重要視。
+【好まれる文体】論理的・簡潔・知的。MECE的な要因分解、定量比較、因果の明示。
+【好まれる語彙】「要因を分解した」「優先順位を付けた」「構造的原因」「再現性」「示唆」「打ち手」「論点」「仮説検証」。
+【避ける表現】感情論、「頑張った」「精一杯」「楽しかった」、根性論。
+【模範文章の特徴】「目標と現状の乖離をXX%と定量化し、要因を3つに分解、最も影響度の高い要因に対して打ち手を講じた」のように、思考プロセスが透けて見える書き方。`,
+  agency: `【業界特性】論理＋人柄。共感力・巻き込み力・本質を見抜くセンスを評価。
+【好まれる文体】温度のある論理。動機に人間味があり、施策に当事者の熱量が見える。
+【好まれる語彙】「巻き込んだ」「相手の立場で」「本質的な課題」「共通言語化」「腹落ち」「対話」「軸足」。
+【避ける表現】無機質な羅列、独善的な決断、人を駒のように扱う表現。
+【模範文章の特徴】「なぜそう感じたのか」が伝わる動機、関わった他者の反応、自分が変わった瞬間が描かれる。`,
+  maker: `【業界特性】堅実・誠実・チームワーク・継続性。
+【好まれる文体】落ち着いた敬体。誇張を避け、地道な取り組みを丁寧に描く。
+【好まれる語彙】「粘り強く」「継続的に」「協力して」「一つひとつ」「丁寧に」「信頼関係」「土台」「着実に」。
+【避ける表現】派手な表現、「劇的に」「圧倒的」「最速で」など短期成果志向の語彙。
+【模範文章の特徴】長期間にわたる積み重ね、チーム全員の貢献への言及、組織との協調が見える。`,
+  venture: `【業界特性】推進力・成果志向・自走力・スピード。
+【好まれる文体】テンポが良く、主体性と打ち手の数が前面に出る。やや口語寄りも可。
+【好まれる語彙】「主体的に」「自ら手を挙げ」「ゼロから」「巻き取った」「アジャイル」「PDCA」「即実行」「オーナーシップ」。
+【避ける表現】受動的な表現、「指示されて」「言われた通りに」、過度な慎重さ。
+【模範文章の特徴】自分で意思決定し、素早く実行し、失敗から学んで次の打ち手につなげるサイクルが見える。`,
+  general: `【業界特性】業界横断で読まれる前提。バランス重視。
+【好まれる文体】論理性・人柄・成果のいずれにも偏らない標準的で読みやすい敬体。
+【好まれる語彙】「課題」「取り組み」「工夫」「結果」「学び」など標準語。
+【避ける表現】業界特化の専門用語、過度な感情表現、過度な数値偏重。`,
+};
+const CATEGORY_LABEL = {
+  intern: '長期インターン・ビジネス', parttime: 'アルバイト', circle: 'サークル・部活動',
+  academic: '学業・研究・ゼミ', other: 'その他',
+};
+const RESULT_GUIDANCE = {
+  A: `【セグメントA：数値成果あり】
+- 結論文の中に必ず数値を入れる（「CPAを35%改善した」など）
+- 七つ目の結果セクションで再度数値を提示し、施策との因果を明示
+- 学びは「数値を生んだ思考プロセス」として書く（再現性を示す）`,
+  B: `【セグメントB：定性成果あり】
+- 結論文に「仕組みを作った」「組織を変えた」など定性成果を明示
+- 数値の捏造は厳禁。具体的な変化を描く
+- 第三者からの評価や継続利用されている事実があれば加える`,
+  C: `【セグメントC：成果はこれから／継続中】
+- 結論文は「現在も継続中の取り組み」として正直に書く
+- 七つ目では現時点の進捗・手応え・得た学びを書く
+- 「成果はこれから出るが、ここまでで分かったことは〜」という構造で誠実さを保つ`,
+  D: `【セグメントD：誇張になるのが怖い】
+- 入力された情報以上の成果を絶対に追加しない
+- プロセスの精度・思考の深さを主役にする
+- 「結果」より「思考」「打ち手の選び方」「失敗から得た学び」を厚く書く`,
+  E: `【セグメントE：成果が思いつかない】
+- 入力された経験内容から、自然に派生し得る成果像を控えめな描写で
+- 過度に成果を盛らず、取り組み姿勢と学びを軸にする
+- 嘘を作らないこと（経験内容に矛盾しない範囲で）`,
+};
+const SEG_NOTES = {
+  A: { title: '【セグメントA：数値成果あり】', body: '結論文に数値を配置し、施策との因果を明示します。' },
+  B: { title: '【セグメントB：定性成果あり】', body: '仕組み化・組織変化を具体的に。数値の捏造はNGです。' },
+  C: { title: '【セグメントC：継続中】', body: '「七つ目」は現時点での進捗・手応え・学びで構いません。' },
+  D: { title: '【セグメントD：誇張が怖い】', body: 'プロセスの精度を主役にします。面接で答えられる範囲だけ書いてください。' },
+  E: { title: '【セグメントE：成果が思いつかない】', body: '「七つ目」は空欄でもOK。AIが控えめな範囲で補完します。' },
+};
+
+// === SERVER CALL ===
+async function callServer(prompt) {
+  const res = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || `サーバーエラー: ${res.status}`);
+  }
+  if (!data.text) throw new Error('応答が空です');
+  return data.text;
+}
+
+async function buildSkeleton() {
+  const f = state.fields;
+  const prompt = `あなたは就活ESのプロライターです。利用者の入力を元に、ロジックが通った「論理骨子」をJSON形式で作成してください。
+
+【最重要：因果チェーンの一貫性】
+動機 → 目標の必然性 → 現状とのギャップ（課題） → 課題の根本原因 → 原因に効く施策 → 結果 → 学び
+この鎖が破綻なくつながるように、足りない情報は経験内容から自然に補完し、矛盾する情報は調整してください。
+
+【業界トーン】${INDUSTRY_LABEL[state.industry]}
+${INDUSTRY_TONE[state.industry]}
+
+【経験】${CATEGORY_LABEL[state.category]}
+【成果セグメント】${RESULT_GUIDANCE[state.resultType]}
+
+【利用者の入力】
+[結論・何をしたか] ${f.conclusion || '（空欄）'}
+[動機] ${f.motivation || '（空欄）'}
+[目標] ${f.goal || '（空欄）'}
+[課題（理想と現状のギャップ）] ${f.gap || '（空欄）'}
+[原因] ${f.cause || '（空欄）'}
+[施策] ${f.action || '（空欄）'}
+[結果と学び] ${f.result || '（空欄）'}
+[強調したい強み] ${f.strength || '特になし'}
+
+【出力形式】必ず以下のJSON形式のみを出力。前置き・解説・コードブロック禁止。
+{
+  "conclusion": "結論（何をしてどうなったか、1文）",
+  "motivation": "動機（なぜ始めたか、その経験を選んだ必然性、1-2文）",
+  "goal": "目標（何を目指したか、定量/定性で具体的に、1文）",
+  "gap": "目標と現状のギャップ（課題、1文）",
+  "cause": "課題を生んだ根本原因（1-2文、なぜそうなっていたか）",
+  "action": "原因に効く施策（具体的な行動、1-3文）",
+  "result": "結果と学び（成果の事実＋そこから得た再現性ある学び、1-2文）",
+  "logic_check": "因果チェーンが通っているかの自己評価（短く）"
+}
+
+【絶対遵守】
+- 入力にない数値・固有名詞・成果を捏造しないこと
+- 入力情報を最大限活かし、空欄部分のみを自然に補完すること
+- 動機と目標、課題と原因、原因と施策、施策と結果が論理的につながること
+
+JSONのみ出力してください。`;
+
+  const response = await callServer(prompt);
+  let cleaned = response.trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '');
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch (e2) {}
+    }
+    throw new Error('骨子のJSON解析に失敗しました');
+  }
+}
+
+async function expandToText(sk, targetLen, attempt = 1, prevText = '') {
+  let lengthHint = '';
+  if (attempt > 1) {
+    const diff = targetLen - prevText.length;
+    if (diff > 0) {
+      lengthHint = `\n【再生成指示】前回の出力は${prevText.length}字でした（目標に${diff}字足りません）。具体例の追加・修飾語の追加で${diff}字程度膨らませてください。必ず${targetLen}字±10字に収めてください。`;
+    } else {
+      lengthHint = `\n【再生成指示】前回の出力は${prevText.length}字でした（目標を${-diff}字超えています）。冗長表現の削除・統合で${-diff}字程度削ってください。必ず${targetLen}字±10字に収めてください。`;
+    }
+  }
+
+  const prompt = `あなたは就活ESのプロライターです。論理骨子を元に、指定文字数のガクチカを生成してください。
+
+【絶対遵守の制約】
+1. 文字数: ${targetLen}字 ±10字以内（句読点・括弧・記号も1字としてカウント）
+2. 構成順序: 結論 → 動機 → 目標 → ギャップ → 原因 → 施策 → 結果と学び（厳守）
+3. ナンバリング: 結論文を最初に置き、その後に「一つ目に、」「二つ目に、」「三つ目に、」「四つ目に、」「五つ目に、」「六つ目に、」というテキスト型ナンバリングを必ず付ける（一つ目=動機、二つ目=目標、三つ目=ギャップ、四つ目=原因、五つ目=施策、六つ目=結果と学び）
+4. 文体: 一人称「私」、です・ます調で統一
+5. 一段落: 改行なしの一段落として出力（一文ごとの改行はしない）
+6. 嘘・誇張禁止: 骨子にない数値や成果を絶対に追加しない
+
+【業界トーン】${INDUSTRY_LABEL[state.industry]}
+${INDUSTRY_TONE[state.industry]}
+
+【論理骨子】
+結論: ${sk.conclusion}
+動機: ${sk.motivation}
+目標: ${sk.goal}
+課題: ${sk.gap}
+原因: ${sk.cause}
+施策: ${sk.action}
+結果と学び: ${sk.result}
+${lengthHint}
+
+【出力】本文のみ。前置き・後置き・解説・タイトル・JSON・コードブロック禁止。改行なしの一段落で${targetLen}字±10字。`;
+
+  const response = await callServer(prompt);
+  return response.trim().replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '').replace(/\n+/g, '');
+}
+
+async function generateOne(sk, targetLen) {
+  let attempt = 0;
+  let lastText = '';
+  while (attempt < 5) {
+    attempt++;
+    const text = await expandToText(sk, targetLen, attempt, lastText);
+    lastText = text;
+    if (Math.abs(text.length - targetLen) <= 10) return text;
+  }
+  return lastText;
+}
+
+function goStep(n) {
+  state.step = n;
+  document.querySelectorAll('.stage').forEach(s => {
+    s.style.display = (parseInt(s.dataset.stage) === n) ? '' : 'none';
+    if (parseInt(s.dataset.stage) === n) s.classList.add('reveal');
+  });
+  document.querySelectorAll('.step-pill').forEach(p => {
+    const sn = parseInt(p.dataset.step);
+    p.classList.remove('active', 'done');
+    if (sn === n) p.classList.add('active');
+    else if (sn < n) p.classList.add('done');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function bindOptions(containerId, stateKey) {
+  const container = document.getElementById(containerId);
+  container.querySelectorAll('.opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      container.querySelectorAll('.opt').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      state[stateKey] = opt.dataset.value;
+      const stage = container.closest('.stage');
+      const nextBtn = stage.querySelector('[data-next]');
+      if (nextBtn) nextBtn.disabled = false;
+    });
+  });
+}
+bindOptions('industryOptions', 'industry');
+bindOptions('categoryOptions', 'category');
+bindOptions('resultOptions', 'resultType');
+
+document.querySelectorAll('[data-next]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const next = parseInt(btn.dataset.next);
+    if (next === 4) updateSegmentNote();
+    goStep(next);
+  });
+});
+document.querySelectorAll('[data-back]').forEach(btn => {
+  btn.addEventListener('click', () => goStep(parseInt(btn.dataset.back)));
+});
+
+function updateSegmentNote() {
+  const note = SEG_NOTES[state.resultType];
+  const el = document.getElementById('segmentNote');
+  if (note) el.innerHTML = `<div class="subseg-title">${note.title}</div>${note.body}`;
+  const lbl = document.getElementById('resultLabel');
+  if (state.resultType === 'E') {
+    lbl.innerHTML = '七つ目：結果と学び <span style="color:#a8893a; font-size:11px; font-weight:400;">（任意・空欄でAIが補完）</span>';
+  } else if (state.resultType === 'D') {
+    lbl.innerHTML = '七つ目：結果と学び <span style="color:#a8893a; font-size:11px; font-weight:400;">（誇張せず実話の範囲で）</span>';
+  } else {
+    lbl.innerHTML = '七つ目：結果と学び';
+  }
+}
+
+document.getElementById('generateBtn').addEventListener('click', async () => {
+  const fieldIds = ['conclusion','motivation','goal','gap','cause','action','result','strength'];
+  state.fields = {};
+  fieldIds.forEach(id => { state.fields[id] = document.getElementById('f-' + id).value.trim(); });
+  if (!state.fields.conclusion && !state.fields.action) {
+    alert('「結論（一つ目）」または「施策（六つ目）」のどちらかは入力してください。');
+    return;
+  }
+  goStep(5);
+  await generateAll();
+});
+
+function setStatus(key, status) {
+  state.status[key] = status;
+  const el = document.getElementById('ls-' + key);
+  if (el) {
+    el.classList.remove('loading', 'done', 'error');
+    if (status === 'loading') el.classList.add('loading');
+    else if (status === 'done') el.classList.add('done');
+    else if (status === 'error') el.classList.add('error');
+    if (key === 'skeleton') {
+      el.textContent = status === 'loading' ? '骨子生成中' : status === 'done' ? '骨子 ✓' : status === 'error' ? '骨子 ✗' : '骨子';
+    } else {
+      el.textContent = key + '字' + (status === 'done' ? ' ✓' : status === 'error' ? ' ✗' : status === 'loading' ? '...' : '');
+    }
+  }
+  if (key !== 'skeleton') {
+    const tab = document.querySelector(`.tab[data-tab="${key}"]`);
+    if (tab) {
+      tab.classList.toggle('error', status === 'error');
+      const lbl = document.getElementById('lbl-' + key);
+      if (lbl) {
+        if (status === 'done' && state.generated[key]) lbl.textContent = state.generated[key].length + '字';
+        else if (status === 'loading') lbl.textContent = '生成中';
+        else if (status === 'error') lbl.textContent = '失敗';
+        else lbl.textContent = ['SHORT','STANDARD','LONG','FULL'][[200,400,600,800].indexOf(parseInt(key))];
+      }
+    }
+  }
+}
+
+async function generateAll() {
+  document.getElementById('loader').style.display = '';
+  document.getElementById('resultContent').style.display = 'none';
+  document.getElementById('errorMsg').style.display = 'none';
+  state.generated = { 200: null, 400: null, 600: null, 800: null };
+  state.skeleton = null;
+  ['skeleton', 200, 400, 600, 800].forEach(k => setStatus(k, k === 'skeleton' ? 'loading' : 'pending'));
+
+  try {
+    const sk = await buildSkeleton();
+    state.skeleton = sk;
+    setStatus('skeleton', 'done');
+    renderSkeleton(sk);
+
+    [200, 400, 600, 800].forEach(len => setStatus(len, 'loading'));
+    const lengths = [200, 400, 600, 800];
+    await Promise.all(lengths.map(async (len) => {
+      try {
+        const text = await generateOne(sk, len);
+        state.generated[len] = text;
+        setStatus(len, 'done');
+      } catch (e) {
+        console.error(`${len}字生成エラー:`, e);
+        setStatus(len, 'error');
+      }
+    }));
+
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('resultContent').style.display = '';
+    state.activeTab = 200;
+    renderTab(200);
+    document.querySelectorAll('.tab').forEach(t => {
+      t.classList.toggle('active', parseInt(t.dataset.tab) === 200);
+    });
+  } catch (e) {
+    document.getElementById('loader').style.display = 'none';
+    setStatus('skeleton', 'error');
+    showError('生成中にエラーが発生しました。\n\n' + e.message + '\n\nしばらく時間をおいて再度お試しください。');
+  }
+}
+
+function renderSkeleton(sk) {
+  const labels = [
+    ['MOTIVE', '動機', sk.motivation],
+    ['GOAL', '目標', sk.goal],
+    ['GAP', '課題', sk.gap],
+    ['CAUSE', '原因', sk.cause],
+    ['ACTION', '施策', sk.action],
+    ['RESULT', '結果', sk.result],
+  ];
+  const html = labels.map(([code, jp, val]) =>
+    `<div class="skeleton-row"><span class="skeleton-label">${code}</span><span class="skeleton-value"><strong>${jp}：</strong>${val || '—'}</span></div>`
+  ).join('');
+  document.getElementById('skeletonContent').innerHTML = html;
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const len = parseInt(tab.dataset.tab);
+    state.activeTab = len;
+    renderTab(len);
+  });
+});
+
+function renderTab(len) {
+  const text = state.generated[len];
+  document.getElementById('metaFormat').textContent = len + '字';
+  document.getElementById('metaCount').textContent = text ? text.length + '字' : '—';
+  document.getElementById('metaIndustry').textContent = INDUSTRY_LABEL[state.industry] || '—';
+  document.getElementById('resultBody').textContent = text || (state.status[len] === 'error' ? '生成失敗。再生成を押してください。' : '生成中...');
+}
+
+document.getElementById('copyBtn').addEventListener('click', async () => {
+  const text = state.generated[state.activeTab];
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById('copyBtn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ コピー完了';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('コピーしました');
+  }
+});
+
+document.getElementById('regenBtn').addEventListener('click', async () => {
+  if (!state.skeleton) { alert('骨子が生成されていません'); return; }
+  const len = state.activeTab;
+  const btn = document.getElementById('regenBtn');
+  const orig = btn.textContent;
+  btn.textContent = '生成中...';
+  btn.disabled = true;
+  setStatus(len, 'loading');
+  try {
+    const text = await generateOne(state.skeleton, len);
+    state.generated[len] = text;
+    setStatus(len, 'done');
+    renderTab(len);
+  } catch (e) {
+    setStatus(len, 'error');
+    alert('再生成失敗: ' + e.message);
+  }
+  btn.textContent = orig;
+  btn.disabled = false;
+});
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  const lengths = [200, 400, 600, 800];
+  let txt = `=== ES Forge 出力 ===\n業界: ${INDUSTRY_LABEL[state.industry]}\n経験: ${CATEGORY_LABEL[state.category]}\n成果セグメント: ${state.resultType}\n生成日時: ${new Date().toLocaleString('ja-JP')}\n\n`;
+  if (state.skeleton) {
+    const sk = state.skeleton;
+    txt += `── 論理骨子 ──\n動機: ${sk.motivation}\n目標: ${sk.goal}\n課題: ${sk.gap}\n原因: ${sk.cause}\n施策: ${sk.action}\n結果: ${sk.result}\n\n`;
+  }
+  lengths.forEach(len => {
+    const text = state.generated[len];
+    txt += `\n──────────────────────\n【${len}字版】（実カウント: ${text ? text.length : '—'}字）\n──────────────────────\n${text || '生成失敗'}\n`;
+  });
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ES_Forge_${Date.now()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('restartBtn').addEventListener('click', () => {
+  if (!confirm('入力内容と生成結果がすべてリセットされます。よろしいですか？')) return;
+  location.reload();
+});
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.style.display = '';
+}
+
+goStep(1);
+</script>
+</body>
+</html>
