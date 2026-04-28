@@ -38,22 +38,33 @@ export default async function handler(req, res) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
       })
     });
 
     if (!r.ok) {
+      const errBody = await r.text();
+      console.error('Gemini error:', r.status, errBody);
       if (r.status === 429) {
         return res.status(429).json({ error: 'Daily quota reached' });
       }
-      return res.status(502).json({ error: 'AI generation failed (' + r.status + ')' });
+      return res.status(502).json({ error: 'AI generation failed (' + r.status + '): ' + errBody.slice(0, 300) });
     }
 
     const data = await r.json();
     if (!data.candidates || !data.candidates[0]) {
-      return res.status(502).json({ error: 'Empty response' });
+      console.error('Empty Gemini response:', JSON.stringify(data));
+      return res.status(502).json({ error: 'Empty response: ' + JSON.stringify(data).slice(0, 300) });
     }
-    const text = data.candidates[0].content.parts.map(function(p) { return p.text || ''; }).join('').trim();
+    const cand = data.candidates[0];
+    if (!cand.content || !cand.content.parts) {
+      console.error('No content in candidate:', JSON.stringify(cand));
+      return res.status(502).json({ error: 'No content (finishReason: ' + (cand.finishReason || 'unknown') + ')' });
+    }
+    const text = cand.content.parts.map(function(p) { return p.text || ''; }).join('').trim();
+    if (!text) {
+      return res.status(502).json({ error: 'Empty text in response' });
+    }
     return res.status(200).json({ text: text });
   } catch (e) {
     return res.status(500).json({ error: 'Server error: ' + (e.message || String(e)) });
