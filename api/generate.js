@@ -1,8 +1,4 @@
-// Vercel Serverless Function: Gemini APIプロキシ
-// APIキーはサーバー側の環境変数 GEMINI_API_KEY に保存し、利用者には公開しない
-
 export default async function handler(req, res) {
-  // CORS（同一オリジンなら不要だが念のため）
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -10,16 +6,13 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({
-      error: 'サーバー設定エラー: GEMINI_API_KEYが設定されていません。Vercelの環境変数を確認してください。'
-    });
+  const myKey = process.env.GEMINI_API_KEY;
+  if (!myKey) {
+    return res.status(500).json({ error: 'GEMINI_API_KEY is not set' });
   }
 
   let body;
@@ -29,57 +22,40 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid JSON body' });
   }
 
-  const { prompt } = body || {};
+  const prompt = body && body.prompt;
   if (!prompt || typeof prompt !== 'string') {
-    return res.status(400).json({ error: 'promptが必要です' });
+    return res.status(400).json({ error: 'prompt is required' });
   }
-
-  // 簡易レート制限：プロンプトが極端に長い場合は弾く（無料枠保護）
   if (prompt.length > 20000) {
-    return res.status(400).json({ error: 'promptが長すぎます（20,000文字制限）' });
+    return res.status(400).json({ error: 'prompt too long' });
   }
 
   try {
-    const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apikey)}`
-    const geminiBody = {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 2048
-      }
-    };
-
+    const encodedKey = encodeURIComponent(myKey);
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodedKey;
     const r = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(geminiBody)
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+      })
     });
 
     if (!r.ok) {
-      const errText = await r.text();
-      console.error('Gemini API error:', r.status, errText);
-      // 無料枠超過の場合
       if (r.status === 429) {
-        return res.status(429).json({
-          error: '本日の利用上限に達しました。しばらく時間をおいてお試しください。'
-        });
+        return res.status(429).json({ error: 'Daily quota reached' });
       }
-      return res.status(502).json({
-        error: 'AI生成に失敗しました（Gemini API ' + r.status + '）。しばらく経ってから再度お試しください。'
-      });
+      return res.status(502).json({ error: 'AI generation failed (' + r.status + ')' });
     }
 
     const data = await r.json();
     if (!data.candidates || !data.candidates[0]) {
-      return res.status(502).json({
-        error: '応答が空です。入力内容を見直して再度お試しください。'
-      });
+      return res.status(502).json({ error: 'Empty response' });
     }
-
-    const text = data.candidates[0].content.parts.map(p => p.text || '').join('').trim();
-    return res.status(200).json({ text });
+    const text = data.candidates[0].content.parts.map(function(p) { return p.text || ''; }).join('').trim();
+    return res.status(200).json({ text: text });
   } catch (e) {
-    console.error('Server error:', e);
-    return res.status(500).json({ error: 'サーバーエラー: ' + (e.message || String(e)) });
+    return res.status(500).json({ error: 'Server error: ' + (e.message || String(e)) });
   }
 }
