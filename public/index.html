@@ -475,16 +475,17 @@ async function callAPI(prompt, mode) {
   return data.text;
 }
 
-function buildSkeletonPrompt() {
+function buildAllInOnePrompt() {
   const inputs = state.inputs;
   const industry = INDUSTRY_TONE[state.industry];
   const expLabel = EXPERIENCES.find(e => e.id === state.experience).label;
   const segLabel = SEGMENTS.find(s => s.id === state.segment).label;
+  const industryLabel = INDUSTRIES.find(i => i.id === state.industry).label;
 
-  return `あなたはES(エントリーシート)添削のプロです。利用者の入力から、論理的に一貫したガクチカの「骨子」をJSON形式で生成してください。
+  return `あなたはES(エントリーシート)添削のプロです。1回の応答で「論理骨子」と「4つの文字数の本文(200/400/600/800字)」を全てJSON形式で生成してください。
 
 【利用者の状況】
-- 提出先業界: ${INDUSTRIES.find(i => i.id === state.industry).label}
+- 提出先業界: ${industryLabel}
 - 経験カテゴリ: ${expLabel}
 - 成果セグメント: ${segLabel}
 
@@ -497,24 +498,48 @@ function buildSkeletonPrompt() {
 - 施策: ${inputs.action || '(未入力)'}
 - 結果と学び: ${inputs.result || '(未入力)'}
 
-【出力ルール】
-- 必ず以下のJSON形式で出力。それ以外は一切出力しない（コードフェンス、解説文、前置きすべて禁止）。
-- 各フィールドは**1文・最大40字以内**で簡潔に。後で文字数別に展開するため、骨子は短く方向性だけ示す。
-- 利用者の入力を尊重しつつ、欠けている部分は文脈から自然に補完する。
-- 因果チェーン「動機→目標→ギャップ→原因→施策→結果→学び」が論理的に通っていることを保証する。
-- 成果セグメント${state.segment}に応じて、結果欄は数値/定性/プロセス重視で書き分ける。
-- ${segLabel === 'D' || segLabel === 'C' || state.segment === 'C' || state.segment === 'D' ? 'プロセス重視で「数値の成果」は強調しない' : '可能なら成果を具体的に表現する'}
+【業界トーン】
+${industry.style}
+- 推奨語彙: ${industry.prefer.join('、')}
+- 避ける表現: ${industry.avoid.join('、')}
 
-【JSONフォーマット】
+【骨子の作り方】
+- 各フィールドは1文・40字以内で方向性のみ示す
+- 因果チェーン「動機→目標→ギャップ→原因→施策→結果→学び」が論理的に通ること
+- 利用者の入力を尊重し、欠けは文脈から自然に補完
+- セグメント${state.segment}: ${state.segment === 'C' || state.segment === 'D' ? 'プロセス重視、数値成果は強調しない' : '可能なら具体的な成果を表現'}
+
+【本文のルール】（全文字数共通）
+1. 必ず「私が学生時代に最も力を入れたのは〜」で始める
+2. 「一つ目に、」「二つ目に、」「三つ目に、」…とテキスト型ナンバリング
+3. 業界トーンの推奨語彙を自然に使い、避ける表現を排除
+4. 不自然な敬語・誇張・定型句は禁止
+5. **文字数は厳守**。空白・改行はカウントしない。±10字以内に必ず収める
+
+【文字数別の書き方】
+- 200字: 動機・施策・結果に集中。詳述は省く。
+- 400字: 各要素1文ずつバランスよく。
+- 600字: 各要素2文程度。施策と結果を厚めに。
+- 800字: 各要素を丁寧に展開。施策のプロセスと学びを最も詳しく。
+
+【出力フォーマット】（このJSONのみを返す。コードフェンス禁止、解説禁止）
 {
-  "conclusion": "結論（私が学生時代に最も力を入れたのは〜）",
-  "motive": "動機（その経験を始めた理由）",
-  "goal": "目標（何を目指したか）",
-  "gap": "ギャップ（理想と現状の差）",
-  "cause": "原因（ギャップを生んでいた要因）",
-  "action": "施策（原因への打ち手、具体的に）",
-  "result": "結果（施策の効果、定量または定性）",
-  "learning": "学び（再現性ある教訓）"
+  "skeleton": {
+    "conclusion": "...",
+    "motive": "...",
+    "goal": "...",
+    "gap": "...",
+    "cause": "...",
+    "action": "...",
+    "result": "...",
+    "learning": "..."
+  },
+  "es": {
+    "200": "200字±10字の本文",
+    "400": "400字±10字の本文",
+    "600": "600字±10字の本文",
+    "800": "800字±10字の本文"
+  }
 }
 
 JSONのみを出力してください。`;
@@ -577,48 +602,37 @@ async function generate() {
   $('#result-area').classList.add('hidden');
 
   try {
-    // STEP A: 論理骨子を生成
-    $('#loading-text').textContent = '論理骨子を生成しています…';
-    $('#loading-substep').textContent = 'STEP 1 of 2';
-    const skeletonText = await callAPI(buildSkeletonPrompt(), 'skeleton');
-    let skeleton;
-    try {
-      skeleton = JSON.parse(skeletonText);
-    } catch (e) {
-      // フォールバック1: コードフェンスを除去
-      let cleaned = skeletonText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
-      try {
-        skeleton = JSON.parse(cleaned);
-      } catch (e2) {
-        // フォールバック2: JSON部分を貪欲マッチで抽出
-        const match = skeletonText.match(/\{[\s\S]*\}/);
-        if (match) {
-          try {
-            skeleton = JSON.parse(match[0]);
-          } catch (e3) {
-            throw new Error('論理骨子のJSON解析に失敗しました\n受信内容(冒頭): ' + skeletonText.substring(0, 200));
-          }
-        } else {
-          throw new Error('論理骨子のJSON解析に失敗しました\n受信内容(冒頭): ' + skeletonText.substring(0, 200));
-        }
-      }
+    // 1-call generation: 骨子+4本文を1回のAPIコールで取得（API無料枠の RPM 節約のため）
+    $('#loading-text').textContent = '骨子と4種類の本文を生成しています…';
+    $('#loading-substep').textContent = '1リクエストで完了予定（RPM節約）';
+
+    const allText = await callAPIWithRetry(buildAllInOnePrompt(), 'all');
+    const all = parseJsonRobust(allText);
+
+    if (!all.skeleton || !all.es) {
+      throw new Error('応答に必要なフィールドが不足しています\n受信内容(冒頭): ' + allText.substring(0, 200));
     }
-    state.skeleton = skeleton;
 
-    // STEP B: 4文字数を並列生成（リトライ付き）
-    $('#loading-text').textContent = '4種類の文字数で本文を生成しています…';
-    $('#loading-substep').textContent = 'STEP 2 of 2 (200/400/600/800字を並列生成中)';
-
-    const lengths = [200, 400, 600, 800];
-    const results = await Promise.all(lengths.map(len => generateOneLength(skeleton, len)));
-    lengths.forEach((len, i) => state.results[len] = results[i]);
+    state.skeleton = all.skeleton;
+    [200, 400, 600, 800].forEach(len => {
+      state.results[len] = (all.es[String(len)] || all.es[len] || '').trim();
+    });
 
     // 表示
     $('#loading-area').classList.add('hidden');
     $('#result-area').classList.remove('hidden');
-    showSkeleton(skeleton);
+    showSkeleton(all.skeleton);
     updateCounts();
     showResult(200);
+
+    // 文字数チェック: ±10字を外れたものは個別再生成（任意）
+    const offByLen = [200, 400, 600, 800].filter(len => {
+      const cnt = countChars(state.results[len]);
+      return Math.abs(cnt - len) > 10;
+    });
+    if (offByLen.length > 0) {
+      showToast(`${offByLen.join(',')}字版が±10字を外れています。タブから再生成可`);
+    }
   } catch (e) {
     $('#loading-area').classList.add('hidden');
     showError('生成エラー: ' + e.message);
@@ -626,10 +640,43 @@ async function generate() {
   }
 }
 
+// 堅牢なJSON抽出
+function parseJsonRobust(s) {
+  if (!s) throw new Error('空のレスポンス');
+  // 1. そのままパース
+  try { return JSON.parse(s); } catch (_) {}
+  // 2. コードフェンスを除去
+  const stripped = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+  try { return JSON.parse(stripped); } catch (_) {}
+  // 3. 最初の { から最後の } までを貪欲マッチ
+  const match = s.match(/\{[\s\S]*\}/);
+  if (match) {
+    try { return JSON.parse(match[0]); } catch (_) {}
+  }
+  throw new Error('JSON解析に失敗\n受信内容(冒頭): ' + s.substring(0, 200));
+}
+
+// 429時に Retry-After を尊重して自動リトライ
+async function callAPIWithRetry(prompt, mode, maxRetries = 2) {
+  for (let i = 0; i <= maxRetries; i++) {
+    try {
+      return await callAPI(prompt, mode);
+    } catch (e) {
+      const msg = (e && e.message) || '';
+      const m = msg.match(/retry in ([\d.]+)s/i);
+      const isRateLimit = msg.includes('429') || msg.includes('利用上限');
+      if (!isRateLimit || i === maxRetries) throw e;
+      const waitSec = m ? Math.min(parseFloat(m[1]) + 1, 30) : 8;
+      $('#loading-substep').textContent = `レート制限のため ${Math.ceil(waitSec)}秒待機中… (${i + 1}/${maxRetries})`;
+      await new Promise(r => setTimeout(r, waitSec * 1000));
+    }
+  }
+}
+
 async function generateOneLength(skeleton, targetLen) {
   let attempt = '';
-  for (let i = 0; i < 4; i++) {
-    const text = await callAPI(buildExpandPrompt(skeleton, targetLen, attempt), 'expand');
+  for (let i = 0; i < 3; i++) {
+    const text = await callAPIWithRetry(buildExpandPrompt(skeleton, targetLen, attempt), 'expand');
     const cleaned = text.trim();
     const cnt = countChars(cleaned);
     if (Math.abs(cnt - targetLen) <= 10) return cleaned;

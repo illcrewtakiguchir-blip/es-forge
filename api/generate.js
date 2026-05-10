@@ -47,8 +47,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'promptが長すぎます（30,000文字制限）' });
   }
 
-  // mode: 'skeleton' は構造化出力(JSON)、'expand' は文章生成
-  const isSkeleton = mode === 'skeleton';
+  // mode: 'skeleton' / 'all' は構造化出力(JSON)、'expand' は文章生成
+  const isJsonMode = mode === 'skeleton' || mode === 'all';
+  const isSkeleton = isJsonMode;
 
   try {
     // gemini-2.5-flash: 無料枠あり、ES生成に十分な品質。2.0系はこのアカウントでquota=0のため。
@@ -58,9 +59,9 @@ export default async function handler(req, res) {
     const geminiBody = {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: isSkeleton ? 0.4 : 0.65,
-        maxOutputTokens: isSkeleton ? 4096 : 4096,
-        ...(isSkeleton ? { responseMimeType: 'application/json' } : {})
+        temperature: isJsonMode ? 0.45 : 0.65,
+        maxOutputTokens: mode === 'all' ? 8192 : 4096,
+        ...(isJsonMode ? { responseMimeType: 'application/json' } : {})
       }
     };
 
