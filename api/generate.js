@@ -62,7 +62,8 @@ export default async function handler(req, res) {
         });
       }
       return res.status(502).json({
-        error: `AI生成に失敗しました（Gemini API ${r.status}）。再度お試しください。`
+        error: `AI生成に失敗しました（Gemini API ${r.status}）`,
+        detail: errText.substring(0, 500)
       });
     }
 
