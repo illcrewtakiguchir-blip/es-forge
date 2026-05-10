@@ -51,8 +51,9 @@ export default async function handler(req, res) {
   const isSkeleton = mode === 'skeleton';
 
   try {
-    // gemini-2.0-flash-lite: 無料枠あり。2.0-flashは無料枠0、1.5系はこのアカウントで利用不可のため。
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${encodeURIComponent(apiKey)}`;
+    // モデルはbody.modelで指定可能（テスト用）。デフォルトはgemini-2.5-flash-lite
+    const modelName = (body.model || 'gemini-2.5-flash-lite').replace(/[^a-zA-Z0-9.-]/g, '');
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
     const geminiBody = {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
