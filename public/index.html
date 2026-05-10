@@ -240,6 +240,94 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
 .skeleton .row { margin-top: 10px; padding-left: 8px; }
 .skeleton .row b { color: var(--accent); display: inline-block; min-width: 4em; }
 
+/* 候補カード（経験棚卸しモード） */
+.candidate-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 18px 22px;
+  margin-bottom: 14px;
+  transition: all 0.15s;
+}
+.candidate-card:hover { border-color: var(--accent); }
+.candidate-card .candidate-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0 0 6px;
+}
+.candidate-card .candidate-summary {
+  font-size: 13px;
+  color: var(--sub);
+  margin: 0 0 12px;
+  line-height: 1.7;
+}
+.candidate-card .candidate-fields {
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.85;
+  background: var(--soft);
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  display: none;
+}
+.candidate-card .candidate-fields b { color: var(--accent); display: inline-block; min-width: 4.5em; }
+.candidate-card.expanded .candidate-fields { display: block; }
+.candidate-card .candidate-actions { display: flex; gap: 8px; }
+.candidate-card .candidate-actions button {
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--sub);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+.candidate-card .candidate-actions .pick {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.candidate-card .candidate-actions .pick:hover { opacity: 0.85; }
+
+/* 壁打ちエリア */
+.refine-area {
+  background: var(--soft);
+  border: 1px solid var(--accent-2);
+  border-radius: 6px;
+  padding: 18px 22px;
+  margin-top: 16px;
+}
+.refine-area .refine-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0 0 10px;
+}
+.refine-area textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  resize: vertical;
+}
+.refine-area textarea:focus { outline: none; border-color: var(--accent); }
+.refine-area .examples {
+  font-size: 11px;
+  color: var(--sub);
+  margin-top: 6px;
+  line-height: 1.6;
+}
+.refine-area .actions { display: flex; gap: 10px; margin-top: 14px; }
+
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
   background: var(--accent); color: #fff; padding: 12px 22px;
@@ -313,6 +401,37 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
   </div>
 </section>
 
+<!-- Step 3b: 経験棚卸しモード（segment F 選択時に表示） -->
+<section id="step-3b" class="card hidden">
+  <div class="stage-label">STAGE III · 経験棚卸し</div>
+  <h2 class="stage-title">あなたの経験を自由に書く</h2>
+  <p style="color:var(--sub); font-size:13px; margin-top:-12px; margin-bottom:18px;">最近1〜2年でやってきたこと、頑張ったこと、楽しかったこと、苦労したことを自由に書いてください。AIがあなたの経験から<strong>ガクチカ候補を3つ</strong>提案します。</p>
+
+  <div class="field">
+    <label>経験の自由記述</label>
+    <textarea id="extract-text" rows="9" placeholder="例: 居酒屋でアルバイトしていた。人手不足でしんどい時期があった。後輩のシフト調整を手伝った。お客さんに名前を覚えてもらえた。学園祭の実行委員もやっていた。準備が大変だったけど無事終わった。…&#10;&#10;断片的でもOK。何でも自由に書いてください。"></textarea>
+    <div class="hint">何でもOK：バイト、勉強、サークル、趣味、人間関係、留学、習い事、家族のこと、など</div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn secondary" data-back="3">戻る</button>
+    <button class="btn" id="extract-btn">ガクチカ候補を3つ提案</button>
+  </div>
+
+  <div id="extract-loading" class="loading hidden">
+    <div class="spinner"></div>
+    <div class="stage-text">経験を分析して候補を提案しています…</div>
+  </div>
+
+  <div id="candidates-area" class="hidden" style="margin-top: 28px;">
+    <h3 style="font-size: 16px; margin: 0 0 16px; padding-top: 18px; border-top: 1px solid var(--line);">提案された3つの候補</h3>
+    <div id="candidates-list"></div>
+    <div class="btn-row">
+      <button class="btn secondary" id="extract-retry">別の切り口で再提案してもらう</button>
+    </div>
+  </div>
+</section>
+
 <!-- Step 4: 構成要素入力 -->
 <section id="step-4" class="card hidden">
   <div class="stage-label">STAGE IV</div>
@@ -377,9 +496,19 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
 
     <div class="result-actions">
       <button id="btn-copy">本文をコピー</button>
-      <button id="btn-regen">この文字数を再生成</button>
+      <button id="btn-refine-toggle">🔁 壁打ちで改善</button>
       <button id="btn-download">全4種をテキスト保存</button>
       <button id="btn-restart">最初からやり直す</button>
+    </div>
+
+    <div id="refine-area" class="refine-area hidden">
+      <div class="refine-title">気になる点・改善したい点を具体的に書いてください</div>
+      <textarea id="refine-input" rows="3" placeholder="例: 数値の根拠が弱い／動機が薄い／もっと簡潔に／施策の説明を厚くしたい／結論をパンチライン化したい"></textarea>
+      <div class="examples">活用例: 「数値を強調して」「動機にもっと熱量を」「施策のプロセスを詳しく」「冗長な箇所を削って」「専門用語を平易に」「課題と原因の繋がりが弱いから補強して」など、具体的なほど精度UP</div>
+      <div class="actions">
+        <button class="btn" id="btn-refine-submit">改善版を生成する</button>
+        <button class="btn secondary" id="btn-refine-cancel">キャンセル</button>
+      </div>
     </div>
 
     <details class="skeleton">
@@ -556,7 +685,8 @@ const SEGMENTS = [
   { id: 'B', label: 'B: 定性的な成果がある', desc: '仕組み構築・組織変革・関係構築など' },
   { id: 'C', label: 'C: 成果はこれから・継続中', desc: 'プロセス重視で、取り組み姿勢を語る' },
   { id: 'D', label: 'D: 成果はあるが盛るのが怖い', desc: '成果なし扱いで進行（プロセス重視）' },
-  { id: 'E', label: 'E: 成果が思いつかない', desc: 'AIが経験から派生する成果候補を提案' }
+  { id: 'E', label: 'E: 成果が思いつかない', desc: 'AIが経験から派生する成果候補を提案' },
+  { id: 'F', label: 'F: ガクチカ自体が思いつかない', desc: '🔍 経験棚卸しモードへ。自由記述から3つの候補をAIが提案' }
 ];
 
 
@@ -569,7 +699,8 @@ const state = {
   inputs: {},
   skeleton: null,
   results: { 200: '', 400: '', 600: '', 800: '' },
-  activeTab: 200
+  activeTab: 200,
+  extractedCandidates: null  // 経験棚卸しモードでAIが提案した候補
 };
 
 // ========== ヘルパー ==========
@@ -590,10 +721,23 @@ const goToStep = n => {
   for (let i = 1; i <= 5; i++) {
     $(`#step-${i}`).classList.toggle('hidden', i !== n);
   }
+  $('#step-3b').classList.add('hidden'); // 経験棚卸しモードを必ず閉じる
   $$('.progress .step').forEach(el => {
     const s = +el.dataset.step;
     el.classList.toggle('active', s === n);
     el.classList.toggle('done', s < n);
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+// Stage 3b（経験棚卸しモード）に遷移。progress barは Stage 3 のまま
+const goToStep3b = () => {
+  $('#step-3').classList.add('hidden');
+  $('#step-3b').classList.remove('hidden');
+  // Stage IIIをactive表示のまま維持
+  $$('.progress .step').forEach(el => {
+    const s = +el.dataset.step;
+    el.classList.toggle('active', s === 3);
+    el.classList.toggle('done', s < 3);
   });
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
@@ -654,7 +798,14 @@ buildOptions('#opts-segment', SEGMENTS, id => { state.segment = id; $('#next-3')
 // ナビゲーション
 $('#next-1').onclick = () => goToStep(2);
 $('#next-2').onclick = () => goToStep(3);
-$('#next-3').onclick = () => goToStep(4);
+$('#next-3').onclick = () => {
+  // Segment F (ガクチカ無い) を選んだら経験棚卸しモードへ
+  if (state.segment === 'F') {
+    goToStep3b();
+  } else {
+    goToStep(4);
+  }
+};
 $$('[data-back]').forEach(b => b.onclick = () => goToStep(+b.dataset.back));
 
 // ========== 生成 ==========
@@ -898,6 +1049,200 @@ async function regenerateOne(targetLen) {
   }
 }
 
+// ========== 壁打ち改善モード ==========
+function buildRefinePrompt(targetLen, currentText, refinementRequest) {
+  const industry = findIndustry(state.industry);
+  const toneObj = TONE[industry.tone];
+
+  return `あなたはES添削のプロです。利用者から「気になる点・改善希望」が指摘されました。現在のESを、その指摘を反映した改善版に書き直してください。
+
+【現在のES（${targetLen}字版）】
+${currentText}
+
+【利用者の指摘・改善希望】
+${refinementRequest}
+
+【厳守ルール】
+1. 必ず「私が学生時代に最も力を入れたのは〜」で始める
+2. 「一つ目に、」「二つ目に、」のテキスト型ナンバリングを維持
+3. 文字数は${targetLen}字±10字に厳守（空白・改行はカウントしない）
+4. 業界トーン: ${toneObj.style}
+   推奨語彙: ${toneObj.prefer.join('、')}
+   避ける表現: ${toneObj.avoid.join('、')}
+5. 出力は本文のみ。前置き・解説・コードフェンス禁止
+6. 利用者の指摘に集中して直す。指摘されていない良い箇所はできるだけ維持する（全部書き直さない）
+
+それでは改善版を書いてください。`;
+}
+
+async function refineLength() {
+  const refineInput = $('#refine-input').value.trim();
+  if (!refineInput) {
+    showError('改善希望を具体的に入力してください');
+    return;
+  }
+  if (!state.skeleton) return;
+
+  const targetLen = state.activeTab;
+  const currentText = state.results[targetLen];
+  const submitBtn = $('#btn-refine-submit');
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = '改善中…';
+  $('#result-body').innerHTML = '<div style="color:var(--sub); font-style:italic;">壁打ち中…改善版を作成しています</div>';
+
+  try {
+    const text = await callAPIWithRetry(buildRefinePrompt(targetLen, currentText, refineInput), 'expand');
+    state.results[targetLen] = text.trim();
+    updateCounts();
+    showResult(targetLen);
+    $('#refine-input').value = '';
+    $('#refine-area').classList.add('hidden');
+    showToast(`${targetLen}字版を改善しました`);
+  } catch (e) {
+    state.results[targetLen] = currentText; // 復元
+    showResult(targetLen);
+    showError('改善エラー: ' + e.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '改善版を生成する';
+  }
+}
+
+// ========== 経験棚卸しモード（ガクチカ無い人向け） ==========
+function buildExtractPrompt(freeText) {
+  const industry = findIndustry(state.industry);
+  const toneObj = TONE[industry.tone];
+  const expLabel = EXPERIENCES.find(e => e.id === state.experience).label;
+
+  return `あなたはES添削のプロで、ガクチカが思いつかない就活生をサポートします。利用者の自由記述から、ガクチカとして使える経験候補を3つ提案してください。
+
+【利用者の状況】
+- 提出先業界: ${industry.label}（代表企業: ${industry.examples}）
+- 経験カテゴリ: ${expLabel}
+
+【利用者の自由記述】
+${freeText}
+
+【業界トーン: ${toneObj.name}】
+${toneObj.style}
+
+【提案ルール】
+- 同じ経験でも違う切り口・角度で3案提案する（言い換えだけにしない）
+- 各候補は7要素（結論・動機・目標・ギャップ・原因・施策・結果）を全て埋めた状態にする
+- 数値成果が文中にない場合は無理に作らず、定性的な変化やプロセスを書く（嘘や誇張は厳禁）
+- 利用者が選びやすいよう、各候補にタイトル(30字以内)と1文サマリを付ける
+- ${industry.label}業界のトーンに合った切り口にする
+- 各フィールドは1文・40字以内で簡潔に
+
+【出力フォーマット】（このJSONのみ。コードフェンス禁止、解説禁止）
+{
+  "candidates": [
+    {
+      "title": "30字以内のタイトル",
+      "summary": "1文でこのガクチカが何かを説明",
+      "fields": {
+        "conclusion": "結論",
+        "motive": "動機",
+        "goal": "目標",
+        "gap": "ギャップ",
+        "cause": "原因",
+        "action": "施策",
+        "result": "結果"
+      }
+    },
+    { 同じ形式でもう1つ },
+    { 同じ形式でもう1つ }
+  ]
+}
+
+JSONのみを出力してください。`;
+}
+
+async function extractCandidates() {
+  const freeText = $('#extract-text').value.trim();
+  if (freeText.length < 30) {
+    showError('もう少し詳しく書いてください（30字以上が目安）');
+    return;
+  }
+
+  const btn = $('#extract-btn');
+  btn.disabled = true;
+  $('#extract-loading').classList.remove('hidden');
+  $('#candidates-area').classList.add('hidden');
+
+  try {
+    const text = await callAPIWithRetry(buildExtractPrompt(freeText), 'skeleton');
+    const data = parseJsonRobust(text);
+
+    if (!data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
+      throw new Error('候補が生成されませんでした。記述をもう少し詳しくして再試行してください');
+    }
+
+    state.extractedCandidates = data.candidates;
+    showCandidates(data.candidates);
+    $('#extract-loading').classList.add('hidden');
+    $('#candidates-area').classList.remove('hidden');
+  } catch (e) {
+    $('#extract-loading').classList.add('hidden');
+    showError('候補生成エラー: ' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function showCandidates(candidates) {
+  const c = $('#candidates-list');
+  c.innerHTML = '';
+  candidates.forEach((cand, idx) => {
+    const card = document.createElement('div');
+    card.className = 'candidate-card';
+    const f = cand.fields || {};
+    card.innerHTML = `
+      <div class="candidate-title">候補${idx + 1}: ${escapeHtml(cand.title || '')}</div>
+      <div class="candidate-summary">${escapeHtml(cand.summary || '')}</div>
+      <div class="candidate-fields">
+        <div><b>結論:</b> ${escapeHtml(f.conclusion || '')}</div>
+        <div><b>動機:</b> ${escapeHtml(f.motive || '')}</div>
+        <div><b>目標:</b> ${escapeHtml(f.goal || '')}</div>
+        <div><b>ギャップ:</b> ${escapeHtml(f.gap || '')}</div>
+        <div><b>原因:</b> ${escapeHtml(f.cause || '')}</div>
+        <div><b>施策:</b> ${escapeHtml(f.action || '')}</div>
+        <div><b>結果:</b> ${escapeHtml(f.result || '')}</div>
+      </div>
+      <div class="candidate-actions">
+        <button class="toggle">中身を見る</button>
+        <button class="pick">この候補で進む</button>
+      </div>
+    `;
+    card.querySelector('.toggle').onclick = () => {
+      const expanded = card.classList.toggle('expanded');
+      card.querySelector('.toggle').textContent = expanded ? '中身を閉じる' : '中身を見る';
+    };
+    card.querySelector('.pick').onclick = () => selectCandidate(cand);
+    c.appendChild(card);
+  });
+}
+
+function selectCandidate(cand) {
+  const f = cand.fields || {};
+  $('#in-conclusion').value = f.conclusion || '';
+  $('#in-motive').value = f.motive || '';
+  $('#in-goal').value = f.goal || '';
+  $('#in-gap').value = f.gap || '';
+  $('#in-cause').value = f.cause || '';
+  $('#in-action').value = f.action || '';
+  $('#in-result').value = f.result || '';
+  goToStep(4);
+  showToast('候補を選択しました。必要に応じて編集してください');
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+
 function showSkeleton(s) {
   const labels = {
     conclusion: '結論', motive: '動機', goal: '目標', gap: 'ギャップ',
@@ -929,7 +1274,24 @@ $('#btn-copy').onclick = () => {
   navigator.clipboard.writeText(state.results[state.activeTab]);
   showToast('コピーしました');
 };
-$('#btn-regen').onclick = () => regenerateOne(state.activeTab);
+
+// 壁打ちで改善
+$('#btn-refine-toggle').onclick = () => {
+  const ra = $('#refine-area');
+  const isOpening = ra.classList.contains('hidden');
+  ra.classList.toggle('hidden');
+  if (isOpening) setTimeout(() => $('#refine-input').focus(), 50);
+};
+$('#btn-refine-submit').onclick = refineLength;
+$('#btn-refine-cancel').onclick = () => {
+  $('#refine-area').classList.add('hidden');
+  $('#refine-input').value = '';
+};
+
+// 経験棚卸しモード
+$('#extract-btn').onclick = extractCandidates;
+$('#extract-retry').onclick = extractCandidates;
+
 $('#btn-download').onclick = () => {
   const content = [200, 400, 600, 800].map(len =>
     `===== ${len}字版 =====\n\n${state.results[len]}\n`
