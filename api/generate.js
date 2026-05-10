@@ -58,12 +58,13 @@ export default async function handler(req, res) {
       console.error('Gemini API error:', r.status, errText);
       if (r.status === 429) {
         return res.status(429).json({
-          error: '本日の利用上限に達しました。しばらく時間をおいてお試しください。'
+          error: '利用上限に達しました（429）。RPM(15req/分)かRPD(1500req/日)の制限です。',
+          detail: errText.substring(0, 800)
         });
       }
       return res.status(502).json({
         error: `AI生成に失敗しました（Gemini API ${r.status}）`,
-        detail: errText.substring(0, 500)
+        detail: errText.substring(0, 800)
       });
     }
 
