@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ES Forge｜就活生向けガクチカ自動生成ツール</title>
+<style>
+:root {
+  --bg: #f5f1ea;
+  --paper: #ffffff;
+  --ink: #1a1a1a;
+  --sub: #5a5a5a;
+  --line: #d8d2c5;
+  --accent: #2d4a3e;
+  --accent-2: #b08968;
+  --warn: #c44d2a;
+  --soft: #f0ebe1;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  line-height: 1.75;
+  font-size: 15px;
+}
+.wrap { max-width: 760px; margin: 0 auto; padding: 36px 24px 80px; }
+header { text-align: center; padding-bottom: 28px; border-bottom: 1px solid var(--line); margin-bottom: 32px; }
+h1 { font-size: 32px; letter-spacing: 0.06em; margin: 0 0 8px; font-weight: 600; }
+h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
+.tagline { color: var(--sub); font-size: 13px; letter-spacing: 0.1em; margin: 0; }
+
+.stage-label { color: var(--sub); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 8px; }
+.stage-title { font-size: 22px; margin: 0 0 24px; font-weight: 600; }
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 28px;
+  margin-bottom: 20px;
+}
+
+.options { display: grid; gap: 10px; }
+.option {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  font-size: 15px;
+  text-align: left;
+  color: var(--ink);
+}
+.option:hover { border-color: var(--accent); background: #fff; }
+.option.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+.option strong { display: block; margin-bottom: 4px; font-weight: 600; }
+.option small { color: var(--sub); font-size: 12px; }
+.option.selected small { color: rgba(255,255,255,0.85); }
+
+.field { margin-bottom: 18px; }
+.field label { display: block; font-size: 13px; color: var(--sub); margin-bottom: 6px; letter-spacing: 0.05em; }
+.field label .req { color: var(--warn); margin-left: 4px; }
+.field input, .field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  resize: vertical;
+}
+.field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+.field .hint { font-size: 11px; color: var(--sub); margin-top: 4px; }
+
+.btn-row { display: flex; gap: 12px; margin-top: 28px; }
+.btn {
+  padding: 14px 28px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn.secondary { background: transparent; color: var(--accent); }
+.btn.warn { border-color: var(--warn); background: var(--warn); }
+
+.progress {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  padding: 0 4px;
+}
+.progress .step {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  color: var(--sub);
+  letter-spacing: 0.1em;
+  position: relative;
+  padding-bottom: 18px;
+}
+.progress .step::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: var(--line);
+}
+.progress .step.active::after { background: var(--accent); }
+.progress .step.done::after { background: var(--accent-2); }
+
+.loading { text-align: center; padding: 40px; color: var(--sub); }
+.loading .spinner {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto 16px;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.loading .stage-text { font-size: 13px; }
+.loading .substep { font-size: 11px; color: var(--accent-2); margin-top: 8px; letter-spacing: 0.1em; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error {
+  background: #fdf3f0;
+  border: 1px solid #e8b8a8;
+  color: var(--warn);
+  padding: 14px 18px;
+  border-radius: 4px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.result-tabs { display: flex; border-bottom: 2px solid var(--line); margin-bottom: 18px; }
+.result-tab {
+  flex: 1;
+  padding: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--sub);
+  letter-spacing: 0.1em;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+.result-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.result-tab .count { font-size: 10px; color: var(--accent-2); margin-left: 6px; }
+
+.result-body {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 28px;
+  font-size: 15px;
+  line-height: 2;
+  white-space: pre-wrap;
+  min-height: 160px;
+}
+.result-actions { display: flex; gap: 10px; margin-top: 14px; }
+.result-actions button {
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--sub);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+}
+.result-actions button:hover { border-color: var(--accent); color: var(--accent); }
+
+.skeleton {
+  background: var(--soft);
+  border-radius: 4px;
+  padding: 18px 22px;
+  margin-top: 20px;
+  font-size: 13px;
+  line-height: 1.85;
+}
+.skeleton summary { cursor: pointer; color: var(--sub); font-weight: 600; letter-spacing: 0.05em; outline: none; }
+.skeleton summary::marker { color: var(--accent-2); }
+.skeleton .row { margin-top: 10px; padding-left: 8px; }
+.skeleton .row b { color: var(--accent); display: inline-block; min-width: 4em; }
+
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--accent); color: #fff; padding: 12px 22px;
+  border-radius: 4px; font-size: 13px; opacity: 0; transition: opacity 0.3s;
+  z-index: 100;
+}
+.toast.show { opacity: 1; }
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>ES<span class="amp">&amp;</span>Forge</h1>
+  <p class="tagline">就活生向けガクチカ自動生成 — 200／400／600／800字を一括出力</p>
+</header>
+
+<div class="progress">
+  <div class="step" data-step="1">業界</div>
+  <div class="step" data-step="2">経験</div>
+  <div class="step" data-step="3">成果</div>
+  <div class="step" data-step="4">入力</div>
+  <div class="step" data-step="5">生成</div>
+</div>
+
+<div id="error-area"></div>
+
+<!-- Step 1: 業界 -->
+<section id="step-1" class="card">
+  <div class="stage-label">STAGE I</div>
+  <h2 class="stage-title">提出先企業の業界を選ぶ</h2>
+  <div class="options" id="opts-industry"></div>
+  <div class="btn-row"><button class="btn" id="next-1" disabled>次へ進む</button></div>
+</section>
+
+<!-- Step 2: 経験カテゴリ -->
+<section id="step-2" class="card hidden">
+  <div class="stage-label">STAGE II</div>
+  <h2 class="stage-title">ガクチカに使う経験のカテゴリ</h2>
+  <div class="options" id="opts-experience"></div>
+  <div class="btn-row">
+    <button class="btn secondary" data-back="1">戻る</button>
+    <button class="btn" id="next-2" disabled>次へ進む</button>
+  </div>
+</section>
+
+<!-- Step 3: 成果セグメント -->
+<section id="step-3" class="card hidden">
+  <div class="stage-label">STAGE III</div>
+  <h2 class="stage-title">「成果」の状況を選ぶ</h2>
+  <div class="options" id="opts-segment"></div>
+  <div class="btn-row">
+    <button class="btn secondary" data-back="2">戻る</button>
+    <button class="btn" id="next-3" disabled>次へ進む</button>
+  </div>
+</section>
+
+<!-- Step 4: 構成要素入力 -->
+<section id="step-4" class="card hidden">
+  <div class="stage-label">STAGE IV</div>
+  <h2 class="stage-title">構成要素を入力する</h2>
+  <p style="color:var(--sub); font-size:13px; margin-top:-12px;">空欄でもAIが補完します。<strong>結論</strong>と<strong>施策</strong>のみ必須です。</p>
+
+  <div class="field">
+    <label>① 結論：何をしたか<span class="req">*</span></label>
+    <input id="in-conclusion" type="text" placeholder="例：長期インターン先で広告アカウントの運用を担当し、CPAを35%改善した">
+  </div>
+  <div class="field">
+    <label>② 動機：なぜその経験を始めたか</label>
+    <textarea id="in-motive" rows="2" placeholder="例：実務で結果を出せる人材になりたかった"></textarea>
+  </div>
+  <div class="field">
+    <label>③ 目標：何を目指したか</label>
+    <input id="in-goal" type="text" placeholder="例：CPA30%改善">
+  </div>
+  <div class="field">
+    <label>④ ギャップ：理想と現状の差</label>
+    <input id="in-gap" type="text" placeholder="例：着任時CPAが目標比1.5倍">
+  </div>
+  <div class="field">
+    <label>⑤ 原因：そのギャップが生じていた要因</label>
+    <textarea id="in-cause" rows="2" placeholder="例：勝ちクリエイティブが訴求軸で整理されておらず、何が成果ドライバーか特定できていなかった"></textarea>
+  </div>
+  <div class="field">
+    <label>⑥ 施策：原因に対して打った手<span class="req">*</span></label>
+    <textarea id="in-action" rows="3" placeholder="例：訴求軸×表現軸でクリエイティブを分類し、訴求軸を主軸にA/Bテストを設計、週次で勝ちパターンを横展開"></textarea>
+  </div>
+  <div class="field">
+    <label>⑦ 結果と学び</label>
+    <textarea id="in-result" rows="2" placeholder="例：CPAを35%改善、月次予算を1.8倍に拡大。要因を構造化して検証する力を得た"></textarea>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn secondary" data-back="3">戻る</button>
+    <button class="btn" id="generate-btn">ESを生成する</button>
+  </div>
+</section>
+
+<!-- Step 5: 結果 -->
+<section id="step-5" class="card hidden">
+  <div class="stage-label">STAGE V</div>
+  <h2 class="stage-title">生成結果</h2>
+
+  <div id="loading-area" class="loading hidden">
+    <div class="spinner"></div>
+    <div class="stage-text" id="loading-text">論理骨子を生成しています…</div>
+    <div class="substep" id="loading-substep"></div>
+  </div>
+
+  <div id="result-area" class="hidden">
+    <div class="result-tabs">
+      <button class="result-tab active" data-len="200">200字 <span class="count" id="cnt-200"></span></button>
+      <button class="result-tab" data-len="400">400字 <span class="count" id="cnt-400"></span></button>
+      <button class="result-tab" data-len="600">600字 <span class="count" id="cnt-600"></span></button>
+      <button class="result-tab" data-len="800">800字 <span class="count" id="cnt-800"></span></button>
+    </div>
+
+    <div class="result-body" id="result-body"></div>
+
+    <div class="result-actions">
+      <button id="btn-copy">本文をコピー</button>
+      <button id="btn-regen">この文字数を再生成</button>
+      <button id="btn-download">全4種をテキスト保存</button>
+      <button id="btn-restart">最初からやり直す</button>
+    </div>
+
+    <details class="skeleton">
+      <summary>論理骨子を見る（生成の元になった構造）</summary>
+      <div id="skeleton-body"></div>
+    </details>
+  </div>
+</section>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ========== データ定義 ==========
+const INDUSTRIES = [
+  { id: 'consulting', label: 'コンサル・金融・商社', desc: '論理性・分析力・成果の構造化を重視' },
+  { id: 'marketing', label: '広告・マスコミ・人材', desc: '対話力・企画力・人を動かす力を重視' },
+  { id: 'maker', label: 'メーカー・インフラ', desc: '誠実さ・継続性・組織貢献を重視' },
+  { id: 'venture', label: 'ベンチャー・IT', desc: 'スピード・自走力・成果志向を重視' },
+  { id: 'general', label: '業界問わず汎用', desc: 'バランス重視のオーソドックスな文体' }
+];
+const EXPERIENCES = [
+  { id: 'internship', label: '長期インターン・ビジネス', desc: '実務で数値や成果を出した経験' },
+  { id: 'parttime', label: 'アルバイト', desc: '接客・現場運営・店舗改善など' },
+  { id: 'club', label: 'サークル・部活', desc: 'チーム活動・組織運営・大会など' },
+  { id: 'study', label: '学業・研究・ゼミ', desc: '論文・研究プロジェクト・課題解決' },
+  { id: 'other', label: 'その他', desc: '個人活動・ボランティア・留学など' }
+];
+const SEGMENTS = [
+  { id: 'A', label: 'A: 明確な数値成果がある', desc: '売上・順位・件数増などを数字で示せる' },
+  { id: 'B', label: 'B: 定性的な成果がある', desc: '仕組み構築・組織変革・関係構築など' },
+  { id: 'C', label: 'C: 成果はこれから・継続中', desc: 'プロセス重視で、取り組み姿勢を語る' },
+  { id: 'D', label: 'D: 成果はあるが盛るのが怖い', desc: '成果なし扱いで進行（プロセス重視）' },
+  { id: 'E', label: 'E: 成果が思いつかない', desc: 'AIが経験から派生する成果候補を提案' }
+];
+
+// 業界別プロンプト辞書 - 文体トーン制御
+const INDUSTRY_TONE = {
+  consulting: {
+    style: '論理的・分析的・構造化を重視。「課題を構造化」「要因を分解」「再現性のある」などのフレーズを自然に織り込む',
+    prefer: ['構造化', '要因分解', '優先順位', '再現性', '仕組み化', '本質', 'ボトルネック'],
+    avoid: ['頑張った', '一生懸命', '楽しかった', 'みんなで', '感動した']
+  },
+  marketing: {
+    style: '人を動かす・巻き込む文体。共感と論理のバランス。具体的なエピソードを活かす',
+    prefer: ['巻き込む', '対話', '腹落ち', '価値', '熱量', '伴走', '届ける'],
+    avoid: ['頑張った', '精一杯', '一生懸命', 'みんな']
+  },
+  maker: {
+    style: '誠実・継続性・組織貢献を重視。地に足のついた表現。長期的視点を強調',
+    prefer: ['継続', '改善', '積み重ね', '組織', '貢献', '丁寧に', '責任'],
+    avoid: ['一気に', '爆発的に', 'バズる', '革命的', '破壊']
+  },
+  venture: {
+    style: 'スピード感・自走力・成果志向。短い文・断定調・「動いた・出した」の動詞を多用',
+    prefer: ['仕掛けた', '動かした', '推進', '巻き取った', '即時', '裁量', 'コミット'],
+    avoid: ['お手伝い', 'サポートさせていただいた', '貢献させていただく']
+  },
+  general: {
+    style: 'バランスの取れたオーソドックスな文体。論理性とエピソード性を両立',
+    prefer: ['取り組み', '成果', '学び', '工夫', '貢献'],
+    avoid: ['頑張った', '一生懸命']
+  }
+};
+
+// ========== 状態管理 ==========
+const state = {
+  step: 1,
+  industry: null,
+  experience: null,
+  segment: null,
+  inputs: {},
+  skeleton: null,
+  results: { 200: '', 400: '', 600: '', 800: '' },
+  activeTab: 200
+};
+
+// ========== ヘルパー ==========
+const $ = sel => document.querySelector(sel);
+const $$ = sel => document.querySelectorAll(sel);
+const showToast = msg => {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+};
+const showError = msg => {
+  $('#error-area').innerHTML = `<div class="error">${msg}</div>`;
+  setTimeout(() => $('#error-area').innerHTML = '', 8000);
+};
+const goToStep = n => {
+  state.step = n;
+  for (let i = 1; i <= 5; i++) {
+    $(`#step-${i}`).classList.toggle('hidden', i !== n);
+  }
+  $$('.progress .step').forEach(el => {
+    const s = +el.dataset.step;
+    el.classList.toggle('active', s === n);
+    el.classList.toggle('done', s < n);
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+const countChars = s => (s || '').replace(/\s+/g, '').length;
+
+// ========== 選択UI構築 ==========
+function buildOptions(containerId, items, onSelect) {
+  const c = $(containerId);
+  c.innerHTML = '';
+  items.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.innerHTML = `<strong>${item.label}</strong><small>${item.desc}</small>`;
+    btn.onclick = () => {
+      c.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+      btn.classList.add('selected');
+      onSelect(item.id);
+    };
+    c.appendChild(btn);
+  });
+}
+buildOptions('#opts-industry', INDUSTRIES, id => { state.industry = id; $('#next-1').disabled = false; });
+buildOptions('#opts-experience', EXPERIENCES, id => { state.experience = id; $('#next-2').disabled = false; });
+buildOptions('#opts-segment', SEGMENTS, id => { state.segment = id; $('#next-3').disabled = false; });
+
+// ナビゲーション
+$('#next-1').onclick = () => goToStep(2);
+$('#next-2').onclick = () => goToStep(3);
+$('#next-3').onclick = () => goToStep(4);
+$$('[data-back]').forEach(b => b.onclick = () => goToStep(+b.dataset.back));
+
+// ========== 生成 ==========
+async function callAPI(prompt, mode) {
+  const r = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, mode })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || `API error ${r.status}`);
+  return data.text;
+}
+
+function buildSkeletonPrompt() {
+  const inputs = state.inputs;
+  const industry = INDUSTRY_TONE[state.industry];
+  const expLabel = EXPERIENCES.find(e => e.id === state.experience).label;
+  const segLabel = SEGMENTS.find(s => s.id === state.segment).label;
+
+  return `あなたはES(エントリーシート)添削のプロです。利用者の入力から、論理的に一貫したガクチカの「骨子」をJSON形式で生成してください。
+
+【利用者の状況】
+- 提出先業界: ${INDUSTRIES.find(i => i.id === state.industry).label}
+- 経験カテゴリ: ${expLabel}
+- 成果セグメント: ${segLabel}
+
+【利用者の入力】
+- 結論: ${inputs.conclusion || '(未入力)'}
+- 動機: ${inputs.motive || '(未入力)'}
+- 目標: ${inputs.goal || '(未入力)'}
+- ギャップ: ${inputs.gap || '(未入力)'}
+- 原因: ${inputs.cause || '(未入力)'}
+- 施策: ${inputs.action || '(未入力)'}
+- 結果と学び: ${inputs.result || '(未入力)'}
+
+【出力ルール】
+- 必ず以下のJSON形式で出力。それ以外は一切出力しない。
+- 各フィールドは1〜2文。後で文字数別に展開するため、内容の方向性が一貫していることを最優先。
+- 利用者の入力を尊重しつつ、欠けている部分は文脈から自然に補完する。
+- 因果チェーン「動機→目標→ギャップ→原因→施策→結果→学び」が論理的に通っていることを保証する。
+- 成果セグメント${state.segment}に応じて、結果欄は数値/定性/プロセス重視で書き分ける。
+- ${segLabel === 'D' || segLabel === 'C' || state.segment === 'C' || state.segment === 'D' ? 'プロセス重視で「数値の成果」は強調しない' : '可能なら成果を具体的に表現する'}
+
+【JSONフォーマット】
+{
+  "conclusion": "結論（私が学生時代に最も力を入れたのは〜）",
+  "motive": "動機（その経験を始めた理由）",
+  "goal": "目標（何を目指したか）",
+  "gap": "ギャップ（理想と現状の差）",
+  "cause": "原因（ギャップを生んでいた要因）",
+  "action": "施策（原因への打ち手、具体的に）",
+  "result": "結果（施策の効果、定量または定性）",
+  "learning": "学び（再現性ある教訓）"
+}
+
+JSONのみを出力してください。`;
+}
+
+function buildExpandPrompt(skeleton, targetLen, prevAttempt) {
+  const industry = INDUSTRY_TONE[state.industry];
+  const tone = industry.style;
+  const prefer = industry.prefer.join('、');
+  const avoid = industry.avoid.join('、');
+
+  const lengthGuide = {
+    200: '簡潔に要点だけ。動機・施策・結果に集中し、ギャップや原因の詳述は省く。',
+    400: '結論→動機→目標→ギャップ→原因→施策→結果→学びを各1文程度ずつバランスよく。',
+    600: '各要素を2文程度に展開し、施策と結果を厚めに描写。',
+    800: '各要素を丁寧に展開し、施策のプロセスと学びの解像度を最も高くする。'
+  }[targetLen];
+
+  const retryNote = prevAttempt ? `\n\n【前回の失敗】前回出力は${countChars(prevAttempt)}字でした（目標${targetLen}字）。${countChars(prevAttempt) < targetLen ? '内容を膨らませて' : '冗長部分を削って'}、目標±10字以内に収めてください。` : '';
+
+  return `あなたはES添削のプロです。以下の「論理骨子」をもとに、${targetLen}字±10字の日本語ガクチカを書いてください。
+
+【論理骨子】
+${JSON.stringify(skeleton, null, 2)}
+
+【業界トーン】
+${tone}
+- 推奨語彙: ${prefer}
+- 避ける表現: ${avoid}
+
+【厳守ルール】
+1. 必ず「私が学生時代に最も力を入れたのは〜」で始める。
+2. 構成要素ごとに「一つ目に、」「二つ目に、」「三つ目に、」…とテキスト型ナンバリングを付ける。
+3. 文字数は${targetLen}字±10字に厳守。空白・改行はカウントしない。
+4. ${lengthGuide}
+5. 不自然な敬語、誇張、定型句は使わない。
+6. 出力は本文のみ。前置きや解説は一切書かない。${retryNote}
+
+それでは${targetLen}字のガクチカを書いてください。`;
+}
+
+async function generate() {
+  // バリデーション
+  state.inputs = {
+    conclusion: $('#in-conclusion').value.trim(),
+    motive: $('#in-motive').value.trim(),
+    goal: $('#in-goal').value.trim(),
+    gap: $('#in-gap').value.trim(),
+    cause: $('#in-cause').value.trim(),
+    action: $('#in-action').value.trim(),
+    result: $('#in-result').value.trim()
+  };
+  if (!state.inputs.conclusion || !state.inputs.action) {
+    showError('「結論」と「施策」は必須です。入力してください。');
+    return;
+  }
+
+  goToStep(5);
+  $('#loading-area').classList.remove('hidden');
+  $('#result-area').classList.add('hidden');
+
+  try {
+    // STEP A: 論理骨子を生成
+    $('#loading-text').textContent = '論理骨子を生成しています…';
+    $('#loading-substep').textContent = 'STEP 1 of 2';
+    const skeletonText = await callAPI(buildSkeletonPrompt(), 'skeleton');
+    let skeleton;
+    try {
+      skeleton = JSON.parse(skeletonText);
+    } catch (e) {
+      // JSON抽出を再試行
+      const match = skeletonText.match(/\{[\s\S]*\}/);
+      if (match) skeleton = JSON.parse(match[0]);
+      else throw new Error('論理骨子のJSON解析に失敗しました');
+    }
+    state.skeleton = skeleton;
+
+    // STEP B: 4文字数を並列生成（リトライ付き）
+    $('#loading-text').textContent = '4種類の文字数で本文を生成しています…';
+    $('#loading-substep').textContent = 'STEP 2 of 2 (200/400/600/800字を並列生成中)';
+
+    const lengths = [200, 400, 600, 800];
+    const results = await Promise.all(lengths.map(len => generateOneLength(skeleton, len)));
+    lengths.forEach((len, i) => state.results[len] = results[i]);
+
+    // 表示
+    $('#loading-area').classList.add('hidden');
+    $('#result-area').classList.remove('hidden');
+    showSkeleton(skeleton);
+    updateCounts();
+    showResult(200);
+  } catch (e) {
+    $('#loading-area').classList.add('hidden');
+    showError('生成エラー: ' + e.message);
+    goToStep(4);
+  }
+}
+
+async function generateOneLength(skeleton, targetLen) {
+  let attempt = '';
+  for (let i = 0; i < 4; i++) {
+    const text = await callAPI(buildExpandPrompt(skeleton, targetLen, attempt), 'expand');
+    const cleaned = text.trim();
+    const cnt = countChars(cleaned);
+    if (Math.abs(cnt - targetLen) <= 10) return cleaned;
+    attempt = cleaned;
+  }
+  return attempt; // 最後の試行を返す
+}
+
+async function regenerateOne(targetLen) {
+  if (!state.skeleton) return;
+  $('#result-body').textContent = '再生成中…';
+  try {
+    const text = await generateOneLength(state.skeleton, targetLen);
+    state.results[targetLen] = text;
+    updateCounts();
+    showResult(targetLen);
+    showToast(`${targetLen}字を再生成しました`);
+  } catch (e) {
+    showError('再生成エラー: ' + e.message);
+  }
+}
+
+function showSkeleton(s) {
+  const labels = {
+    conclusion: '結論', motive: '動機', goal: '目標', gap: 'ギャップ',
+    cause: '原因', action: '施策', result: '結果', learning: '学び'
+  };
+  $('#skeleton-body').innerHTML = Object.keys(labels).map(k =>
+    `<div class="row"><b>${labels[k]}:</b> ${s[k] || '(未生成)'}</div>`
+  ).join('');
+}
+
+function updateCounts() {
+  [200, 400, 600, 800].forEach(len => {
+    const cnt = countChars(state.results[len]);
+    const el = $(`#cnt-${len}`);
+    if (el) el.textContent = `(${cnt}字)`;
+  });
+}
+
+function showResult(len) {
+  state.activeTab = len;
+  $$('.result-tab').forEach(t => t.classList.toggle('active', +t.dataset.len === len));
+  $('#result-body').textContent = state.results[len] || '(生成失敗)';
+}
+
+// イベント
+$$('.result-tab').forEach(t => t.onclick = () => showResult(+t.dataset.len));
+$('#generate-btn').onclick = generate;
+$('#btn-copy').onclick = () => {
+  navigator.clipboard.writeText(state.results[state.activeTab]);
+  showToast('コピーしました');
+};
+$('#btn-regen').onclick = () => regenerateOne(state.activeTab);
+$('#btn-download').onclick = () => {
+  const content = [200, 400, 600, 800].map(len =>
+    `===== ${len}字版 =====\n\n${state.results[len]}\n`
+  ).join('\n\n');
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'gakuchika.txt'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('ダウンロード完了');
+};
+$('#btn-restart').onclick = () => location.reload();
+</script>
+</body>
+</html>
