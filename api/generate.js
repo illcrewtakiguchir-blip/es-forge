@@ -37,7 +37,8 @@ export default async function handler(req, res) {
   const isSkeleton = mode === 'skeleton';
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+    // gemini-1.5-flash: 無料枠 15 RPM / 1500 RPD あり（2.0-flashは無料枠0のため不可）
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
     const geminiBody = {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
