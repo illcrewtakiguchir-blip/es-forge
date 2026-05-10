@@ -498,8 +498,8 @@ function buildSkeletonPrompt() {
 - 結果と学び: ${inputs.result || '(未入力)'}
 
 【出力ルール】
-- 必ず以下のJSON形式で出力。それ以外は一切出力しない。
-- 各フィールドは1〜2文。後で文字数別に展開するため、内容の方向性が一貫していることを最優先。
+- 必ず以下のJSON形式で出力。それ以外は一切出力しない（コードフェンス、解説文、前置きすべて禁止）。
+- 各フィールドは**1文・最大40字以内**で簡潔に。後で文字数別に展開するため、骨子は短く方向性だけ示す。
 - 利用者の入力を尊重しつつ、欠けている部分は文脈から自然に補完する。
 - 因果チェーン「動機→目標→ギャップ→原因→施策→結果→学び」が論理的に通っていることを保証する。
 - 成果セグメント${state.segment}に応じて、結果欄は数値/定性/プロセス重視で書き分ける。
@@ -585,10 +585,23 @@ async function generate() {
     try {
       skeleton = JSON.parse(skeletonText);
     } catch (e) {
-      // JSON抽出を再試行
-      const match = skeletonText.match(/\{[\s\S]*\}/);
-      if (match) skeleton = JSON.parse(match[0]);
-      else throw new Error('論理骨子のJSON解析に失敗しました');
+      // フォールバック1: コードフェンスを除去
+      let cleaned = skeletonText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+      try {
+        skeleton = JSON.parse(cleaned);
+      } catch (e2) {
+        // フォールバック2: JSON部分を貪欲マッチで抽出
+        const match = skeletonText.match(/\{[\s\S]*\}/);
+        if (match) {
+          try {
+            skeleton = JSON.parse(match[0]);
+          } catch (e3) {
+            throw new Error('論理骨子のJSON解析に失敗しました\n受信内容(冒頭): ' + skeletonText.substring(0, 200));
+          }
+        } else {
+          throw new Error('論理骨子のJSON解析に失敗しました\n受信内容(冒頭): ' + skeletonText.substring(0, 200));
+        }
+      }
     }
     state.skeleton = skeleton;
 

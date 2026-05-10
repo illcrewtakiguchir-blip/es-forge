@@ -59,7 +59,7 @@ export default async function handler(req, res) {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: isSkeleton ? 0.4 : 0.65,
-        maxOutputTokens: isSkeleton ? 1500 : 2200,
+        maxOutputTokens: isSkeleton ? 4096 : 4096,
         ...(isSkeleton ? { responseMimeType: 'application/json' } : {})
       }
     };
