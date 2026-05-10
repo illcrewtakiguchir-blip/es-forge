@@ -77,6 +77,44 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
 }
 .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
 .field .hint { font-size: 11px; color: var(--sub); margin-top: 4px; }
+.field select {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%23999' d='M6 8L0 0h12z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 40px;
+}
+.field select:focus { outline: none; border-color: var(--accent); }
+.field select.select-large { font-size: 16px; padding: 16px 18px; padding-right: 44px; }
+.field optgroup { font-weight: 600; color: var(--accent); }
+.field option { color: var(--ink); padding: 6px; }
+
+.industry-info {
+  background: var(--soft);
+  border-left: 3px solid var(--accent-2);
+  border-radius: 4px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  font-size: 13px;
+  line-height: 1.9;
+}
+.industry-info .info-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.industry-info .info-label {
+  color: var(--sub);
+  min-width: 70px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
 
 .btn-row { display: flex; gap: 12px; margin-top: 28px; }
 .btn {
@@ -235,7 +273,21 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
 <section id="step-1" class="card">
   <div class="stage-label">STAGE I</div>
   <h2 class="stage-title">提出先企業の業界を選ぶ</h2>
-  <div class="options" id="opts-industry"></div>
+  <p style="color:var(--sub); font-size:13px; margin-top:-12px; margin-bottom:18px;">業界を選ぶと、その業界が好む文体・語彙でESが生成されます（40業界対応）。</p>
+
+  <div class="field">
+    <label>提出先業界</label>
+    <select id="industry-select" class="select-large">
+      <option value="">— 業界を選択してください —</option>
+    </select>
+  </div>
+
+  <div class="industry-info hidden" id="industry-info">
+    <div class="info-row"><span class="info-label">選択中:</span> <span id="industry-name"></span></div>
+    <div class="info-row"><span class="info-label">代表企業:</span> <span id="industry-examples"></span></div>
+    <div class="info-row"><span class="info-label">業界トーン:</span> <span id="industry-tone"></span></div>
+  </div>
+
   <div class="btn-row"><button class="btn" id="next-1" disabled>次へ進む</button></div>
 </section>
 
@@ -343,13 +395,155 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
 
 <script>
 // ========== データ定義 ==========
-const INDUSTRIES = [
-  { id: 'consulting', label: 'コンサル・金融・商社', desc: '論理性・分析力・成果の構造化を重視' },
-  { id: 'marketing', label: '広告・マスコミ・人材', desc: '対話力・企画力・人を動かす力を重視' },
-  { id: 'maker', label: 'メーカー・インフラ', desc: '誠実さ・継続性・組織貢献を重視' },
-  { id: 'venture', label: 'ベンチャー・IT', desc: 'スピード・自走力・成果志向を重視' },
-  { id: 'general', label: '業界問わず汎用', desc: 'バランス重視のオーソドックスな文体' }
+// 40業界をカテゴリで分類。各業界はtone(A-H)を持つ
+const INDUSTRY_CATEGORIES = [
+  {
+    name: 'コンサル・専門サービス',
+    industries: [
+      { id: 'consulting_strategy', label: '戦略・総合コンサル', examples: 'マッキンゼー、BCG、ベイン、デロイト戦略', tone: 'A' },
+      { id: 'consulting_it', label: 'ITコンサル・SI', examples: 'アクセンチュア、NRI、Abeam、富士通', tone: 'A' },
+      { id: 'audit', label: '監査法人・会計事務所', examples: 'EY、KPMG、PwC、デロイト、あずさ', tone: 'B' }
+    ]
+  },
+  {
+    name: '金融',
+    industries: [
+      { id: 'megabank', label: 'メガバンク・信託銀行', examples: '三菱UFJ、みずほ、SMBC、三井住友信託', tone: 'B' },
+      { id: 'regional_bank', label: '地方銀行・信金・信組', examples: '千葉銀、横浜銀、北陸銀、京都信金', tone: 'B' },
+      { id: 'securities', label: '証券・投資銀行', examples: '野村、大和、ゴールドマン、モルスタ、JPM', tone: 'B' },
+      { id: 'insurance', label: '生命保険・損害保険', examples: '日本生命、東京海上、SOMPO、第一生命', tone: 'B' },
+      { id: 'asset_mgmt', label: 'アセマネ・運用会社', examples: '三菱UFJAM、ブラックロック、野村AM', tone: 'B' },
+      { id: 'pe_vc', label: 'PE・VC・ファンド', examples: 'ベインキャピタル、ジャフコ、ANRI、グロービスCV', tone: 'B' }
+    ]
+  },
+  {
+    name: '商社',
+    industries: [
+      { id: 'sogo_shosha', label: '総合商社', examples: '三菱、三井、伊藤忠、住友、丸紅、双日', tone: 'C' },
+      { id: 'pro_shosha', label: '専門商社', examples: '阪和興業、稲畑産業、長瀬産業、神鋼商事', tone: 'D' }
+    ]
+  },
+  {
+    name: '広告・マスコミ・人材',
+    industries: [
+      { id: 'advertising', label: '広告代理店', examples: '電通、博報堂、ADK、サイバーエージェント', tone: 'C' },
+      { id: 'broadcast', label: 'テレビ・ラジオ', examples: 'NHK、フジテレビ、TBS、日テレ、テレ東', tone: 'C' },
+      { id: 'newspaper', label: '新聞・出版・印刷', examples: '朝日、日経、読売、講談社、KADOKAWA、凸版', tone: 'C' },
+      { id: 'pr_marketing', label: 'PR・マーケティング会社', examples: 'ベクトル、サニーサイドアップ、共同PR', tone: 'C' },
+      { id: 'hr', label: '人材・HR・教育サービス', examples: 'リクルート、パーソル、エン、ベネッセ、マイナビ', tone: 'C' }
+    ]
+  },
+  {
+    name: 'IT・通信',
+    industries: [
+      { id: 'it_saas', label: 'IT・SaaS・Web', examples: '楽天、メルカリ、SmartHR、Sansan、DeNA、freee', tone: 'E' },
+      { id: 'startup', label: 'メガベンチャー・スタートアップ', examples: 'LayerX、ナレッジワーク、10X、Notion日本', tone: 'E' },
+      { id: 'telecom', label: '通信キャリア', examples: 'NTT、KDDI、ソフトバンク、楽天モバイル', tone: 'D' },
+      { id: 'gaming', label: 'ゲーム・エンタメ', examples: '任天堂、スクエニ、サイバー、バンナム、KONAMI', tone: 'E' }
+    ]
+  },
+  {
+    name: 'メーカー',
+    industries: [
+      { id: 'electronics', label: '電機・精密機器', examples: 'ソニー、キーエンス、村田製作所、パナソニック', tone: 'D' },
+      { id: 'semicon', label: '半導体・電子部品', examples: 'キオクシア、ルネサス、東京エレクトロン、SUMCO', tone: 'D' },
+      { id: 'auto', label: '自動車・輸送機器', examples: 'トヨタ、ホンダ、日産、デンソー、ヤマハ発動機', tone: 'D' },
+      { id: 'food', label: '食品・飲料', examples: '味の素、サントリー、明治、キリン、アサヒ', tone: 'D' },
+      { id: 'cosmetics', label: '日用品・化粧品', examples: '花王、資生堂、ユニリーバ、ライオン、コーセー', tone: 'F' },
+      { id: 'chemical', label: '化学・素材', examples: '信越化学、三菱ケミ、住友化学、東レ、旭化成', tone: 'D' },
+      { id: 'pharma', label: '製薬・医療機器', examples: '武田、第一三共、エーザイ、テルモ、オリンパス', tone: 'G' }
+    ]
+  },
+  {
+    name: 'インフラ・建設・運輸',
+    industries: [
+      { id: 'infra', label: 'インフラ（電力・ガス・水道）', examples: '東電、東ガス、関電、大阪ガス', tone: 'D' },
+      { id: 'transport', label: '鉄道・航空・海運', examples: 'JR各社、ANA、JAL、商船三井、日本郵船', tone: 'D' },
+      { id: 'logistics', label: '物流・倉庫', examples: 'ヤマト、佐川、日通、センコー、SBS', tone: 'D' },
+      { id: 'realestate', label: '不動産・ディベロッパー', examples: '三井不動、三菱地所、住友不動、東急不動', tone: 'D' },
+      { id: 'construction', label: '建設・住宅・建材', examples: '大林、清水、鹿島、積水ハウス、大和ハウス', tone: 'D' }
+    ]
+  },
+  {
+    name: '小売・流通・サービス',
+    industries: [
+      { id: 'retail', label: '小売・流通・EC', examples: 'イオン、セブン、ファストリ、ニトリ、楽天', tone: 'F' },
+      { id: 'apparel', label: 'アパレル・ファッション', examples: 'ユニクロ、UA、ZOZO、無印、ベイクルーズ', tone: 'F' },
+      { id: 'food_service', label: '外食・フードサービス', examples: 'スタバ、ロイヤルHD、すかいらーく、サイゼ', tone: 'F' },
+      { id: 'hospitality', label: 'ホテル・観光・旅行', examples: '帝国H、JTB、HIS、星野リゾート、プリンス', tone: 'F' },
+      { id: 'sports', label: 'スポーツ・フィットネス', examples: 'アシックス、ミズノ、コナミスポーツ、RIZAP', tone: 'F' }
+    ]
+  },
+  {
+    name: '医療・公共',
+    industries: [
+      { id: 'medical', label: '医療・福祉・介護', examples: '医療法人、ベネッセ介護、ニチイ、SOMPOケア', tone: 'G' },
+      { id: 'public', label: '公務員・官公庁・団体', examples: '国家、地方、JICA、JETRO、独立行政法人', tone: 'D' }
+    ]
+  },
+  {
+    name: 'その他',
+    industries: [
+      { id: 'general', label: '業界問わず汎用', examples: '（業界指定なし。バランス型の文体で生成）', tone: 'H' }
+    ]
+  }
 ];
+
+// フラット参照用（id → industry検索）
+const INDUSTRIES_FLAT = INDUSTRY_CATEGORIES.flatMap(c => c.industries);
+const findIndustry = id => INDUSTRIES_FLAT.find(i => i.id === id);
+
+// 8つのトーングループ（業界文体辞書）
+const TONE = {
+  A: {
+    name: '論理・構造重視',
+    style: '論理的・分析的・構造化を重視。「課題を構造化」「要因を分解」「再現性のある」などのフレーズを自然に織り込む',
+    prefer: ['構造化', '要因分解', '優先順位', '再現性', '仕組み化', '本質', 'ボトルネック'],
+    avoid: ['頑張った', '一生懸命', '楽しかった', 'みんなで', '感動した']
+  },
+  B: {
+    name: '数字・分析重視',
+    style: '数字とリスクで語る。定量的・冷静な分析。リスクとリターンの両面を意識する',
+    prefer: ['定量', 'リターン', 'リスク管理', '指標', '検証', '改善ドリブン', '数値', '根拠'],
+    avoid: ['楽しかった', '感動した', 'みんなで', '頑張った', '熱量']
+  },
+  C: {
+    name: '対話・巻き込み',
+    style: '人を動かす・巻き込む文体。共感と論理のバランス。具体的なエピソードを活かす',
+    prefer: ['巻き込む', '対話', '腹落ち', '価値', '熱量', '伴走', '届ける'],
+    avoid: ['頑張った', '精一杯', '一生懸命', 'みんな']
+  },
+  D: {
+    name: '誠実・継続・組織貢献',
+    style: '誠実・継続性・組織貢献を重視。地に足のついた表現。長期的視点を強調する',
+    prefer: ['継続', '改善', '積み重ね', '組織', '貢献', '丁寧に', '責任'],
+    avoid: ['一気に', '爆発的に', 'バズる', '革命的', '破壊']
+  },
+  E: {
+    name: 'スピード・自走・成果志向',
+    style: 'スピード感・自走力・成果志向。短い文・断定調・「動いた・出した」の動詞を多用する',
+    prefer: ['仕掛けた', '動かした', '推進', '巻き取った', '即時', '裁量', 'コミット'],
+    avoid: ['お手伝い', 'サポートさせていただいた', '貢献させていただく']
+  },
+  F: {
+    name: '顧客接点・ホスピタリティ',
+    style: '体験価値・お客様視点を重視。臨場感あるエピソード。寄り添う姿勢を表現',
+    prefer: ['お客様', '体験', '想い', '届く', '満足', '感謝', '寄り添う'],
+    avoid: ['構造化', '要因分解', 'スケール', 'ロジック']
+  },
+  G: {
+    name: '専門性・研究志向',
+    style: '専門性と論理を両立。エビデンスベース。深い探究と検証のプロセスを重視',
+    prefer: ['専門性', '深掘り', '検証', 'エビデンス', '探究', '実証', '論理性'],
+    avoid: ['頑張った', '楽しかった', 'みんな']
+  },
+  H: {
+    name: 'バランス型',
+    style: 'バランスの取れたオーソドックスな文体。論理性とエピソード性を両立',
+    prefer: ['取り組み', '成果', '学び', '工夫', '貢献'],
+    avoid: ['頑張った', '一生懸命']
+  }
+};
 const EXPERIENCES = [
   { id: 'internship', label: '長期インターン・ビジネス', desc: '実務で数値や成果を出した経験' },
   { id: 'parttime', label: 'アルバイト', desc: '接客・現場運営・店舗改善など' },
@@ -365,34 +559,6 @@ const SEGMENTS = [
   { id: 'E', label: 'E: 成果が思いつかない', desc: 'AIが経験から派生する成果候補を提案' }
 ];
 
-// 業界別プロンプト辞書 - 文体トーン制御
-const INDUSTRY_TONE = {
-  consulting: {
-    style: '論理的・分析的・構造化を重視。「課題を構造化」「要因を分解」「再現性のある」などのフレーズを自然に織り込む',
-    prefer: ['構造化', '要因分解', '優先順位', '再現性', '仕組み化', '本質', 'ボトルネック'],
-    avoid: ['頑張った', '一生懸命', '楽しかった', 'みんなで', '感動した']
-  },
-  marketing: {
-    style: '人を動かす・巻き込む文体。共感と論理のバランス。具体的なエピソードを活かす',
-    prefer: ['巻き込む', '対話', '腹落ち', '価値', '熱量', '伴走', '届ける'],
-    avoid: ['頑張った', '精一杯', '一生懸命', 'みんな']
-  },
-  maker: {
-    style: '誠実・継続性・組織貢献を重視。地に足のついた表現。長期的視点を強調',
-    prefer: ['継続', '改善', '積み重ね', '組織', '貢献', '丁寧に', '責任'],
-    avoid: ['一気に', '爆発的に', 'バズる', '革命的', '破壊']
-  },
-  venture: {
-    style: 'スピード感・自走力・成果志向。短い文・断定調・「動いた・出した」の動詞を多用',
-    prefer: ['仕掛けた', '動かした', '推進', '巻き取った', '即時', '裁量', 'コミット'],
-    avoid: ['お手伝い', 'サポートさせていただいた', '貢献させていただく']
-  },
-  general: {
-    style: 'バランスの取れたオーソドックスな文体。論理性とエピソード性を両立',
-    prefer: ['取り組み', '成果', '学び', '工夫', '貢献'],
-    avoid: ['頑張った', '一生懸命']
-  }
-};
 
 // ========== 状態管理 ==========
 const state = {
@@ -449,7 +615,39 @@ function buildOptions(containerId, items, onSelect) {
     c.appendChild(btn);
   });
 }
-buildOptions('#opts-industry', INDUSTRIES, id => { state.industry = id; $('#next-1').disabled = false; });
+// 業界はドロップダウン（40業界 × 10カテゴリ）
+function buildIndustrySelect() {
+  const sel = $('#industry-select');
+  INDUSTRY_CATEGORIES.forEach(cat => {
+    const og = document.createElement('optgroup');
+    og.label = cat.name;
+    cat.industries.forEach(ind => {
+      const opt = document.createElement('option');
+      opt.value = ind.id;
+      opt.textContent = ind.label;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+  sel.addEventListener('change', () => {
+    const id = sel.value;
+    if (!id) {
+      $('#industry-info').classList.add('hidden');
+      $('#next-1').disabled = true;
+      state.industry = null;
+      return;
+    }
+    const ind = findIndustry(id);
+    state.industry = id;
+    $('#industry-name').textContent = ind.label;
+    $('#industry-examples').textContent = ind.examples;
+    $('#industry-tone').textContent = `${TONE[ind.tone].name}（${TONE[ind.tone].style.split('。')[0]}）`;
+    $('#industry-info').classList.remove('hidden');
+    $('#next-1').disabled = false;
+  });
+}
+buildIndustrySelect();
+
 buildOptions('#opts-experience', EXPERIENCES, id => { state.experience = id; $('#next-2').disabled = false; });
 buildOptions('#opts-segment', SEGMENTS, id => { state.segment = id; $('#next-3').disabled = false; });
 
@@ -477,15 +675,15 @@ async function callAPI(prompt, mode) {
 
 function buildAllInOnePrompt() {
   const inputs = state.inputs;
-  const industry = INDUSTRY_TONE[state.industry];
+  const industry = findIndustry(state.industry);
+  const tone = TONE[industry.tone];
   const expLabel = EXPERIENCES.find(e => e.id === state.experience).label;
   const segLabel = SEGMENTS.find(s => s.id === state.segment).label;
-  const industryLabel = INDUSTRIES.find(i => i.id === state.industry).label;
 
   return `あなたはES(エントリーシート)添削のプロです。1回の応答で「論理骨子」と「4つの文字数の本文(200/400/600/800字)」を全てJSON形式で生成してください。
 
 【利用者の状況】
-- 提出先業界: ${industryLabel}
+- 提出先業界: ${industry.label}（代表企業: ${industry.examples}）
 - 経験カテゴリ: ${expLabel}
 - 成果セグメント: ${segLabel}
 
@@ -498,10 +696,10 @@ function buildAllInOnePrompt() {
 - 施策: ${inputs.action || '(未入力)'}
 - 結果と学び: ${inputs.result || '(未入力)'}
 
-【業界トーン】
-${industry.style}
-- 推奨語彙: ${industry.prefer.join('、')}
-- 避ける表現: ${industry.avoid.join('、')}
+【業界トーン: ${tone.name}】
+${tone.style}
+- 推奨語彙: ${tone.prefer.join('、')}
+- 避ける表現: ${tone.avoid.join('、')}
 
 【骨子の作り方】
 - 各フィールドは1文・40字以内で方向性のみ示す
@@ -546,10 +744,11 @@ JSONのみを出力してください。`;
 }
 
 function buildExpandPrompt(skeleton, targetLen, prevAttempt) {
-  const industry = INDUSTRY_TONE[state.industry];
-  const tone = industry.style;
-  const prefer = industry.prefer.join('、');
-  const avoid = industry.avoid.join('、');
+  const industry = findIndustry(state.industry);
+  const toneObj = TONE[industry.tone];
+  const tone = toneObj.style;
+  const prefer = toneObj.prefer.join('、');
+  const avoid = toneObj.avoid.join('、');
 
   const lengthGuide = {
     200: '簡潔に要点だけ。動機・施策・結果に集中し、ギャップや原因の詳述は省く。',
