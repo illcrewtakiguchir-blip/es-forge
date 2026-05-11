@@ -64,6 +64,27 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
 .field { margin-bottom: 18px; }
 .field label { display: block; font-size: 13px; color: var(--sub); margin-bottom: 6px; letter-spacing: 0.05em; }
 .field label .req { color: var(--warn); margin-left: 4px; }
+.field label .opt {
+  color: var(--sub);
+  font-size: 11px;
+  margin-left: 6px;
+  font-weight: normal;
+  letter-spacing: 0.05em;
+  background: var(--soft);
+  padding: 1px 8px;
+  border-radius: 3px;
+}
+
+.hint-banner {
+  background: rgba(176, 137, 104, 0.08);
+  border-left: 3px solid var(--accent-2);
+  padding: 12px 16px;
+  border-radius: 0 4px 4px 0;
+  font-size: 13px;
+  color: var(--ink);
+  margin-bottom: 22px;
+  line-height: 1.7;
+}
 .field input, .field textarea {
   width: 100%;
   padding: 12px 14px;
@@ -436,35 +457,37 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
 <section id="step-4" class="card hidden">
   <div class="stage-label">STAGE IV</div>
   <h2 class="stage-title">構成要素を入力する</h2>
-  <p style="color:var(--sub); font-size:13px; margin-top:-12px;">空欄でもAIが補完します。<strong>結論</strong>と<strong>施策</strong>のみ必須です。</p>
+  <p style="color:var(--sub); font-size:13px; margin-top:-12px;">分かる範囲で入力してください。空欄項目はAIが文脈から自然に補完します。</p>
+
+  <div id="segment-hint" class="hint-banner hidden"></div>
 
   <div class="field">
     <label>① 結論：何をしたか<span class="req">*</span></label>
-    <input id="in-conclusion" type="text" placeholder="例：長期インターン先で広告アカウントの運用を担当し、CPAを35%改善した">
+    <input id="in-conclusion" type="text" placeholder="">
   </div>
   <div class="field">
-    <label>② 動機：なぜその経験を始めたか</label>
-    <textarea id="in-motive" rows="2" placeholder="例：実務で結果を出せる人材になりたかった"></textarea>
+    <label>② 動機：なぜその経験を始めたか<span class="opt">任意</span></label>
+    <textarea id="in-motive" rows="2" placeholder=""></textarea>
   </div>
   <div class="field">
-    <label>③ 目標：何を目指したか</label>
-    <input id="in-goal" type="text" placeholder="例：CPA30%改善">
+    <label>③ 目標：何を目指したか<span class="opt">任意</span></label>
+    <input id="in-goal" type="text" placeholder="">
   </div>
   <div class="field">
-    <label>④ ギャップ：理想と現状の差</label>
-    <input id="in-gap" type="text" placeholder="例：着任時CPAが目標比1.5倍">
+    <label>④ ギャップ：理想と現状の差<span class="opt">任意</span></label>
+    <input id="in-gap" type="text" placeholder="">
   </div>
   <div class="field">
-    <label>⑤ 原因：そのギャップが生じていた要因</label>
-    <textarea id="in-cause" rows="2" placeholder="例：勝ちクリエイティブが訴求軸で整理されておらず、何が成果ドライバーか特定できていなかった"></textarea>
+    <label>⑤ 原因：そのギャップが生じていた要因<span class="opt">任意</span></label>
+    <textarea id="in-cause" rows="2" placeholder=""></textarea>
+  </div>
+  <div class="field" id="field-action">
+    <label id="label-action">⑥ 施策：原因に対して打った手<span class="req">*</span></label>
+    <textarea id="in-action" rows="3" placeholder=""></textarea>
   </div>
   <div class="field">
-    <label>⑥ 施策：原因に対して打った手<span class="req">*</span></label>
-    <textarea id="in-action" rows="3" placeholder="例：訴求軸×表現軸でクリエイティブを分類し、訴求軸を主軸にA/Bテストを設計、週次で勝ちパターンを横展開"></textarea>
-  </div>
-  <div class="field">
-    <label>⑦ 結果と学び</label>
-    <textarea id="in-result" rows="2" placeholder="例：CPAを35%改善、月次予算を1.8倍に拡大。要因を構造化して検証する力を得た"></textarea>
+    <label>⑦ 結果と学び<span class="opt">任意</span></label>
+    <textarea id="in-result" rows="2" placeholder=""></textarea>
   </div>
 
   <div class="btn-row">
@@ -680,6 +703,55 @@ const EXPERIENCES = [
   { id: 'study', label: '学業・研究・ゼミ', desc: '論文・研究プロジェクト・課題解決' },
   { id: 'other', label: 'その他', desc: '個人活動・ボランティア・留学など' }
 ];
+// 経験カテゴリ別の入力例（Stage IV のplaceholder用）
+const EXAMPLE_INPUTS = {
+  internship: {
+    conclusion: '例：長期インターン先の広告代理店でCPAを35%改善した',
+    motive: '例：実務で結果を出せる人材になりたかった',
+    goal: '例：CPA30%改善',
+    gap: '例：着任時CPAが目標比1.5倍',
+    cause: '例：勝ちクリエイティブが訴求軸で整理されておらず、勝ち筋が特定できなかった',
+    action: '例：訴求軸×表現軸でクリエイティブを分類し、A/Bテストを設計、週次で勝ちパターンを横展開',
+    result: '例：CPAを35%改善、月次予算を1.8倍に拡大。要因を構造化して検証する力を得た'
+  },
+  parttime: {
+    conclusion: '例：居酒屋のアルバイトで新人教育の仕組みを作り、定着率を向上させた',
+    motive: '例：人手不足で店舗運営が回らない状況を変えたかった',
+    goal: '例：新人の3ヶ月定着率を50%→80%に向上',
+    gap: '例：新人の半数が3ヶ月以内に辞めていた',
+    cause: '例：教育がOJTの場当たり的で、新人が孤立しやすかった',
+    action: '例：業務マニュアルを作成し、先輩との1on1を毎週設定、独り立ちまでのチェックリストを整備',
+    result: '例：定着率が50%→85%に向上。マニュアルは他店舗にも展開された'
+  },
+  club: {
+    conclusion: '例：所属する100人規模のサークルで新入生勧誘を担当し、入会率を倍にした',
+    motive: '例：サークルの未来を担う仲間を増やしたかった',
+    goal: '例：入会率を例年の20%→40%に',
+    gap: '例：直近3年は新入生の入会率が下降傾向だった',
+    cause: '例：勧誘がビラ配りと体験会のみで、サークルの魅力が伝わっていなかった',
+    action: '例：先輩へのインタビュー動画を制作してSNS発信、体験会を3回→6回に増やし、新歓担当5人体制で運営',
+    result: '例：入会率42%を達成。SNS経由の参加者が前年比3倍。新歓体制を仕組み化'
+  },
+  study: {
+    conclusion: '例：ゼミでの卒業研究で地方自治体の課題解決プロジェクトを主導した',
+    motive: '例：座学だけでなく、研究を実社会に活かしたかった',
+    goal: '例：自治体に採用される具体的な施策案を提示する',
+    gap: '例：当初の提案は理論的すぎて自治体に響かなかった',
+    cause: '例：現場の声を聞かず、文献調査だけで提案を組み立てていた',
+    action: '例：自治体職員へのヒアリングを月2回実施、住民アンケートを設計・分析、現場ベースで提案を再構築',
+    result: '例：自治体に提案が採用され試験的にプロジェクトが始動。学会発表で優秀賞を受賞'
+  },
+  other: {
+    conclusion: '例：海外留学先で日本文化交流イベントを企画し、現地100人を集客した',
+    motive: '例：日本文化を伝えるだけでなく、双方向の交流を生みたかった',
+    goal: '例：100人規模のイベントを成功させ、リピーターを生む',
+    gap: '例：当初は告知不足で参加者が想定の半分以下',
+    cause: '例：現地のSNS文化を理解せず、大学掲示板での告知に頼っていた',
+    action: '例：現地学生5人を運営に加え、SNS発信と口コミ動線を設計、内容を体験型に変更',
+    result: '例：当日100人超を集客、第2回も80人参加。現地大学のサークルとして公式化'
+  }
+};
+
 const SEGMENTS = [
   { id: 'A', label: 'A: 明確な数値成果がある', desc: '売上・順位・件数増などを数字で示せる' },
   { id: 'B', label: 'B: 定性的な成果がある', desc: '仕組み構築・組織変革・関係構築など' },
@@ -792,8 +864,50 @@ function buildIndustrySelect() {
 }
 buildIndustrySelect();
 
-buildOptions('#opts-experience', EXPERIENCES, id => { state.experience = id; $('#next-2').disabled = false; });
-buildOptions('#opts-segment', SEGMENTS, id => { state.segment = id; $('#next-3').disabled = false; });
+buildOptions('#opts-experience', EXPERIENCES, id => {
+  state.experience = id;
+  updatePlaceholdersForExperience(id);
+  $('#next-2').disabled = false;
+});
+buildOptions('#opts-segment', SEGMENTS, id => {
+  state.segment = id;
+  updateSegmentRequirements(id);
+  $('#next-3').disabled = false;
+});
+
+// 経験カテゴリ別の例文に切り替え
+function updatePlaceholdersForExperience(experienceId) {
+  const ex = EXAMPLE_INPUTS[experienceId] || EXAMPLE_INPUTS.internship;
+  $('#in-conclusion').placeholder = ex.conclusion;
+  $('#in-motive').placeholder = ex.motive;
+  $('#in-goal').placeholder = ex.goal;
+  $('#in-gap').placeholder = ex.gap;
+  $('#in-cause').placeholder = ex.cause;
+  $('#in-action').placeholder = ex.action;
+  $('#in-result').placeholder = ex.result;
+}
+
+// Segment選択時に必須項目とヒントを更新
+function updateSegmentRequirements(segmentId) {
+  const labelAction = $('#label-action');
+  const hint = $('#segment-hint');
+
+  if (segmentId === 'E') {
+    // E: 結論のみ必須、施策も任意化
+    labelAction.innerHTML = '⑥ 施策：原因に対して打った手<span class="opt">任意</span>';
+    hint.innerHTML = '🤖 <strong>「結論」のみ必須</strong>です。他は思いつかなければ空欄でOK。AIが結論と経験カテゴリから文脈を推測し、施策や結果を自然に補完します。';
+    hint.classList.remove('hidden');
+  } else {
+    // 通常: 結論と施策が必須
+    labelAction.innerHTML = '⑥ 施策：原因に対して打った手<span class="req">*</span>';
+    if (segmentId === 'C' || segmentId === 'D') {
+      hint.innerHTML = '💡 プロセス重視で生成します。数値成果がなくてもOK。「結論」「施策」だけ書ければ十分です。';
+      hint.classList.remove('hidden');
+    } else {
+      hint.classList.add('hidden');
+    }
+  }
+}
 
 // ナビゲーション
 $('#next-1').onclick = () => goToStep(2);
@@ -856,7 +970,14 @@ ${tone.style}
 - 各フィールドは1文・40字以内で方向性のみ示す
 - 因果チェーン「動機→目標→ギャップ→原因→施策→結果→学び」が論理的に通ること
 - 利用者の入力を尊重し、欠けは文脈から自然に補完
-- セグメント${state.segment}: ${state.segment === 'C' || state.segment === 'D' ? 'プロセス重視、数値成果は強調しない' : '可能なら具体的な成果を表現'}
+- セグメント${state.segment}: ${state.segment === 'C' || state.segment === 'D' || state.segment === 'E' ? 'プロセス重視、数値成果は強調しない' : '可能なら具体的な成果を表現'}
+${state.segment === 'E' ? `
+【重要・セグメントE（成果が思いつかない）への対応】
+- 利用者は「成果が思いつかない」と申告。空欄の項目が多い可能性が高い
+- 空欄の項目は、結論と経験カテゴリ（${expLabel}）から自然に推測・補完する
+- 数値成果は捏造しない。定性的な変化・気づき・プロセスを書く
+- 補完内容は嘘や誇張にならないよう、利用者の入力に違和感ない範囲で生成する
+- 「施策」が空欄でも、結論から自然に導かれる「やったであろうこと」を提案する` : ''}
 
 【本文のルール】（全文字数共通）
 1. 必ず「私が学生時代に最も力を入れたのは〜」で始める
@@ -942,8 +1063,13 @@ async function generate() {
     action: $('#in-action').value.trim(),
     result: $('#in-result').value.trim()
   };
-  if (!state.inputs.conclusion || !state.inputs.action) {
-    showError('「結論」と「施策」は必須です。入力してください。');
+  // 必須項目チェック: 結論は常に必須。施策は Segment E のときだけ任意
+  if (!state.inputs.conclusion) {
+    showError('「結論」は必須です。入力してください。');
+    return;
+  }
+  if (state.segment !== 'E' && !state.inputs.action) {
+    showError('「施策」は必須です。入力してください。（成果や施策が思いつかない場合は Segment E を選択）');
     return;
   }
 
