@@ -52,9 +52,9 @@ export default async function handler(req, res) {
   const isSkeleton = isJsonMode;
 
   try {
-    // gemini-2.5-flash: 無料枠あり、ES生成に十分な品質。2.0系はこのアカウントでquota=0のため。
+    // gemini-flash-latest: 2.5-flashより緩い無料枠（このアカウントでは2.5-flashがRPM=20でキツい）
     // body.modelで上書きも可能（debug用）
-    const modelName = (body.model || 'gemini-2.5-flash').replace(/[^a-zA-Z0-9.-]/g, '');
+    const modelName = (body.model || 'gemini-flash-latest').replace(/[^a-zA-Z0-9.-]/g, '');
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
     const geminiBody = {
       contents: [{ parts: [{ text: prompt }] }],
