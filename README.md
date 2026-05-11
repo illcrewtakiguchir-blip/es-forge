@@ -1,6 +1,6 @@
 # ES Forge
 
-就活生向けのガクチカ自動生成ツール。Gemini API + Vercel で動作。
+就活生向けのガクチカ自動生成ツール。Anthropic Claude Haiku 4.5 + Vercel で動作。
 
 ## 機能
 
