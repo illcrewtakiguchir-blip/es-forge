@@ -984,9 +984,20 @@ ${state.segment === 'E' ? `
 2. 「一つ目に、」「二つ目に、」「三つ目に、」…とテキスト型ナンバリング
 3. 業界トーンの推奨語彙を自然に使い、避ける表現を排除
 4. 不自然な敬語・誇張・定型句は禁止
-5. **文字数は厳守**。空白・改行はカウントしない。±10字以内に必ず収める
 
-【文字数別の書き方】
+【🎯 文字数の厳守（最重要ルール）】
+出力前に必ず自分で文字数を数えて確認すること。各長さで以下の範囲に**絶対に**収める：
+- 200字版: **190〜210字**（200字±10字）
+- 400字版: **390〜410字**（400字±10字）
+- 600字版: **590〜610字**（600字±10字）
+- 800字版: **790〜810字**（800字±10字）
+
+カウントルール：
+- 空白・改行・タブはカウントしない
+- それ以外（句読点・数字・記号・全角半角問わず）は全て1文字=1としてカウント
+- 範囲を外れている場合は、多すぎる→冗長な箇所を削る、少なすぎる→施策のプロセスや学びを膨らませる
+
+【文字数別の書き分け】
 - 200字: 動機・施策・結果に集中。詳述は省く。
 - 400字: 各要素1文ずつバランスよく。
 - 600字: 各要素2文程度。施策と結果を厚めに。
@@ -1044,12 +1055,12 @@ ${tone}
 【厳守ルール】
 1. 必ず「私が学生時代に最も力を入れたのは〜」で始める。
 2. 構成要素ごとに「一つ目に、」「二つ目に、」「三つ目に、」…とテキスト型ナンバリングを付ける。
-3. 文字数は${targetLen}字±10字に厳守。空白・改行はカウントしない。
+3. 🎯 **文字数は${targetLen}字±10字（つまり ${targetLen-10}〜${targetLen+10}字）に厳守**。空白・改行・タブはカウントしない。その他（句読点・数字・記号・全角半角問わず）は1文字=1としてカウント。出力前に必ず自分で数えて確認すること。
 4. ${lengthGuide}
 5. 不自然な敬語、誇張、定型句は使わない。
 6. 出力は本文のみ。前置きや解説は一切書かない。${retryNote}
 
-それでは${targetLen}字のガクチカを書いてください。`;
+それでは${targetLen}字（${targetLen-10}〜${targetLen+10}字）のガクチカを書いてください。`;
 }
 
 async function generate() {
@@ -1101,13 +1112,41 @@ async function generate() {
     updateCounts();
     showResult(200);
 
-    // 文字数チェック: ±10字を外れたものは個別再生成（任意）
+    // 🎯 文字数 auto-fix: ±10字を外れたタブを並列で expand 再生成（最大3回リトライ）
     const offByLen = [200, 400, 600, 800].filter(len => {
       const cnt = countChars(state.results[len]);
       return Math.abs(cnt - len) > 10;
     });
+
     if (offByLen.length > 0) {
-      showToast(`${offByLen.join(',')}字版が±10字を外れています。タブから再生成可`);
+      // 進捗を表示
+      $('#loading-area').classList.remove('hidden');
+      $('#loading-text').textContent = `${offByLen.length}個の文字数を調整中…`;
+      $('#loading-substep').textContent = `±10字を外れた版（${offByLen.join('・')}字）を個別に修正します`;
+
+      await Promise.all(offByLen.map(async len => {
+        try {
+          const fixed = await generateOneLength(all.skeleton, len);
+          state.results[len] = fixed;
+          updateCounts();
+          // 現在表示中のタブなら即反映
+          if (state.activeTab === len) showResult(len);
+        } catch (e) {
+          console.warn(`Failed to auto-fix ${len}-char version:`, e);
+        }
+      }));
+
+      $('#loading-area').classList.add('hidden');
+
+      // 最終チェック
+      const stillOff = [200, 400, 600, 800].filter(len => {
+        return Math.abs(countChars(state.results[len]) - len) > 10;
+      });
+      if (stillOff.length === 0) {
+        showToast('✅ 全タブが±10字以内に収まりました');
+      } else {
+        showToast(`⚠️ ${stillOff.join('・')}字版は±10字に収まらず。「壁打ち」で「もっと簡潔に/膨らませて」と指示を`);
+      }
     }
   } catch (e) {
     $('#loading-area').classList.add('hidden');
