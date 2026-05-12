@@ -358,6 +358,156 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
 .toast.show { opacity: 1; }
 
 .hidden { display: none !important; }
+
+/* ===== ナレッジ蓄積（マイライブラリ） ===== */
+.mode-switch {
+  display: flex;
+  gap: 4px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px;
+  margin: 0 auto 24px;
+  width: fit-content;
+}
+.mode-btn {
+  padding: 8px 18px;
+  background: none;
+  border: none;
+  color: var(--sub);
+  font-family: inherit;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mode-btn:hover { color: var(--accent); }
+.mode-btn.active { background: var(--accent); color: #fff; }
+
+.library-section { margin-bottom: 28px; }
+.lib-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lib-section-title .count { color: var(--sub); font-size: 12px; font-weight: normal; }
+.lib-section-desc { color: var(--sub); font-size: 12px; margin: 0 0 14px; }
+
+.lib-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+  transition: all 0.15s;
+}
+.lib-card:hover { border-color: var(--accent); }
+.lib-card .title { font-size: 15px; font-weight: 600; color: var(--ink); }
+.lib-card .meta { font-size: 11px; color: var(--sub); margin-top: 3px; }
+.lib-card .actions { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+.lib-card .actions button {
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--sub);
+}
+.lib-card .actions button.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.lib-card .actions button.danger { color: var(--warn); }
+
+.profile-card-display {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 18px 22px;
+}
+.profile-card-display .pf-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.profile-card-display .pf-tags { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 12px; }
+.profile-card-display .pf-tag {
+  background: var(--soft);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--sub);
+}
+
+/* モーダル */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+.modal {
+  background: var(--paper);
+  border-radius: 6px;
+  padding: 24px 28px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+.modal h3 { font-size: 18px; margin: 0 0 16px; }
+.modal .close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--sub);
+}
+
+/* 履歴詳細用 */
+.history-detail .es-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+}
+.history-detail .es-tab {
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--sub);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.history-detail .es-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.history-detail .es-body {
+  background: var(--soft);
+  padding: 16px 18px;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 2;
+  white-space: pre-wrap;
+}
 </style>
 </head>
 <body>
@@ -367,6 +517,11 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
   <h1>ES<span class="amp">&amp;</span>Forge</h1>
   <p class="tagline">就活生向けガクチカ自動生成 — 200／400／600／800字を一括出力</p>
 </header>
+
+<div class="mode-switch">
+  <button class="mode-btn active" data-mode="create">✍️ ES作成</button>
+  <button class="mode-btn" data-mode="library">📚 マイライブラリ</button>
+</div>
 
 <div class="progress">
   <div class="step" data-step="1">業界</div>
@@ -459,6 +614,14 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
   <h2 class="stage-title">構成要素を入力する</h2>
   <p style="color:var(--sub); font-size:13px; margin-top:-12px;">分かる範囲で入力してください。空欄項目はAIが文脈から自然に補完します。</p>
 
+  <div class="field" id="use-saved-row" style="display:none;">
+    <label>📚 保存済み経験から選ぶ<span class="opt">任意</span></label>
+    <select id="use-saved-exp">
+      <option value="">— 新規入力 —</option>
+    </select>
+    <div class="hint">過去に入力した経験を再利用できます。選ぶと7要素が自動入力されます。</div>
+  </div>
+
   <div id="segment-hint" class="hint-banner hidden"></div>
 
   <div class="field">
@@ -524,6 +687,12 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
       <button id="btn-restart">最初からやり直す</button>
     </div>
 
+    <div class="field" style="margin-top:16px;">
+      <label>📚 マイライブラリに保存するラベル<span class="opt">任意</span></label>
+      <input type="text" id="history-label" placeholder="例: BCG向け1次提出版、コンサル業界用、など" style="font-size:13px;">
+      <div class="hint" style="color:var(--accent-2);">✓ このESは自動でマイライブラリに保存されています。ラベルを付けると履歴で見分けやすくなります。</div>
+    </div>
+
     <div id="refine-area" class="refine-area hidden">
       <div class="refine-title">気になる点・改善したい点を具体的に書いてください</div>
       <textarea id="refine-input" rows="3" placeholder="例: 数値の根拠が弱い／動機が薄い／もっと簡潔に／施策の説明を厚くしたい／結論をパンチライン化したい"></textarea>
@@ -541,8 +710,44 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
   </div>
 </section>
 
+<!-- マイライブラリモード -->
+<section id="library-mode" class="hidden">
+  <div class="library-section">
+    <h3 class="lib-section-title">👤 プロフィール</h3>
+    <p class="lib-section-desc">全ES生成に自動反映されます（毎回入力不要）</p>
+    <div class="profile-card-display" id="profile-display"></div>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn secondary small" id="btn-edit-profile">プロフィール編集</button>
+    </div>
+  </div>
+
+  <div class="library-section">
+    <h3 class="lib-section-title">📚 経験ライブラリ <span class="count" id="exp-count">(0)</span></h3>
+    <p class="lib-section-desc">保存した経験から「ES作成」で再利用できます。新しいESを作るたびに自動保存されます。</p>
+    <div id="experience-list"></div>
+  </div>
+
+  <div class="library-section">
+    <h3 class="lib-section-title">📝 生成履歴 <span class="count" id="hist-count">(0)</span></h3>
+    <p class="lib-section-desc">過去に生成した全ESを保存しています。表示・別業界版作成・コピーが可能。</p>
+    <div id="history-list"></div>
+  </div>
+
+  <div class="library-section">
+    <h3 class="lib-section-title">💾 データ管理</h3>
+    <p class="lib-section-desc">JSONエクスポートでバックアップ・他端末への持ち運び・友達への共有が可能</p>
+    <div class="btn-row">
+      <button class="btn secondary small" id="btn-export-data">JSON エクスポート</button>
+      <button class="btn secondary small" id="btn-import-data">JSON インポート</button>
+      <button class="btn secondary small" style="border-color:var(--warn);color:var(--warn);" id="btn-clear-all">全データ削除</button>
+    </div>
+    <input type="file" id="import-file-input" accept=".json" hidden>
+  </div>
+</section>
+
 </div>
 
+<div id="modal-area"></div>
 <div id="toast" class="toast"></div>
 
 <script>
@@ -772,8 +977,44 @@ const state = {
   skeleton: null,
   results: { 200: '', 400: '', 600: '', 800: '' },
   activeTab: 200,
-  extractedCandidates: null  // 経験棚卸しモードでAIが提案した候補
+  extractedCandidates: null,  // 経験棚卸しモードでAIが提案した候補
+  mode: 'create',             // 'create' or 'library'
+  currentExpId: null,         // 使用中の保存済み経験ID
+  currentHistoryId: null      // 生成後に作られた履歴ID
 };
+
+// ========== ナレッジ蓄積（localStorage） ==========
+const ESF_PROFILE = 'esf_profile_v1';
+const ESF_EXPERIENCES = 'esf_experiences_v1';
+const ESF_HISTORY = 'esf_history_v1';
+
+function loadProfile() {
+  try { return JSON.parse(localStorage.getItem(ESF_PROFILE) || 'null') || {}; }
+  catch (e) { return {}; }
+}
+function saveProfileData(p) { localStorage.setItem(ESF_PROFILE, JSON.stringify(p)); }
+
+function loadExperiences() {
+  try { return JSON.parse(localStorage.getItem(ESF_EXPERIENCES) || '[]'); }
+  catch (e) { return []; }
+}
+function saveExperiences(list) { localStorage.setItem(ESF_EXPERIENCES, JSON.stringify(list)); }
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(ESF_HISTORY) || '[]'); }
+  catch (e) { return []; }
+}
+function saveHistory(list) { localStorage.setItem(ESF_HISTORY, JSON.stringify(list)); }
+
+function genId(prefix) {
+  return prefix + '-' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+}
+
+function escapeHtmlSafe(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
 
 // ========== ヘルパー ==========
 const $ = sel => document.querySelector(sel);
@@ -1111,6 +1352,14 @@ async function generate() {
     showSkeleton(all.skeleton);
     updateCounts();
     showResult(200);
+
+    // 📚 マイライブラリに自動保存（経験ライブラリ + 生成履歴）
+    if (typeof autoSaveAfterGeneration === 'function') {
+      autoSaveAfterGeneration();
+    }
+    // ラベル入力欄をリセット
+    const labelEl = document.getElementById('history-label');
+    if (labelEl) labelEl.value = '';
 
     // 🎯 文字数 auto-fix: ±10字を外れたタブを並列で expand 再生成（最大3回リトライ）
     const offByLen = [200, 400, 600, 800].filter(len => {
@@ -1469,6 +1718,439 @@ $('#btn-download').onclick = () => {
   showToast('ダウンロード完了');
 };
 $('#btn-restart').onclick = () => location.reload();
+
+// ============================================================
+// マイライブラリ（ナレッジ蓄積システム）
+// ============================================================
+
+// モード切替
+function switchMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  if (mode === 'create') {
+    document.getElementById('library-mode').classList.add('hidden');
+    document.querySelector('.progress').classList.remove('hidden');
+    // step-1〜5 を state.step に応じて復元
+    goToStep(state.step || 1);
+  } else {
+    document.querySelectorAll('section[id^="step-"]').forEach(s => s.classList.add('hidden'));
+    document.querySelector('.progress').classList.add('hidden');
+    document.getElementById('library-mode').classList.remove('hidden');
+    renderLibrary();
+  }
+}
+document.querySelectorAll('.mode-btn').forEach(b => b.onclick = () => switchMode(b.dataset.mode));
+
+// ライブラリ描画
+function renderLibrary() {
+  renderProfileDisplay();
+  renderExperienceList();
+  renderHistoryList();
+}
+
+function renderProfileDisplay() {
+  const p = loadProfile();
+  const c = document.getElementById('profile-display');
+  if (!p.name) {
+    c.innerHTML = '<div style="color:var(--sub);font-size:13px;">プロフィール未設定です。下の「プロフィール編集」から登録してください。全ES生成に自動反映されます。</div>';
+    return;
+  }
+  c.innerHTML = `
+    <div class="pf-name">${escapeHtmlSafe(p.name)}</div>
+    <div class="pf-tags">
+      ${p.university ? `<span class="pf-tag">🎓 ${escapeHtmlSafe(p.university)}</span>` : ''}
+      ${p.faculty ? `<span class="pf-tag">${escapeHtmlSafe(p.faculty)}</span>` : ''}
+      ${p.graduateYear ? `<span class="pf-tag">${escapeHtmlSafe(p.graduateYear)}年卒</span>` : ''}
+      ${(p.preferredIndustries || []).map(i => `<span class="pf-tag">${escapeHtmlSafe(i)}</span>`).join('')}
+    </div>
+    ${p.strengths ? `<div style="color:var(--sub);font-size:12px;"><strong>強み:</strong> ${escapeHtmlSafe(p.strengths)}</div>` : ''}
+  `;
+}
+
+function renderExperienceList() {
+  const list = loadExperiences();
+  document.getElementById('exp-count').textContent = `(${list.length})`;
+  const c = document.getElementById('experience-list');
+  if (list.length === 0) {
+    c.innerHTML = '<div style="color:var(--sub);font-size:13px;padding:14px;background:var(--soft);border-radius:4px;">経験はESを生成すると自動で保存されます。</div>';
+    return;
+  }
+  c.innerHTML = list.map(exp => {
+    const expCat = EXPERIENCES.find(e => e.id === exp.experienceCategory);
+    return `
+      <div class="lib-card">
+        <div class="title">${escapeHtmlSafe(exp.title)}</div>
+        <div class="meta">
+          ${expCat ? expCat.label : ''} ・
+          使用 ${exp.usedCount || 0}回 ・
+          ${new Date(exp.createdAt).toLocaleDateString('ja-JP')}
+        </div>
+        <div class="actions">
+          <button class="primary" onclick="useExperienceFromLib('${exp.id}')">この経験で新規ES作成</button>
+          <button onclick="viewExperienceDetail('${exp.id}')">詳細</button>
+          <button class="danger" onclick="deleteExperience('${exp.id}')">削除</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderHistoryList() {
+  const list = loadHistory();
+  document.getElementById('hist-count').textContent = `(${list.length})`;
+  const c = document.getElementById('history-list');
+  if (list.length === 0) {
+    c.innerHTML = '<div style="color:var(--sub);font-size:13px;padding:14px;background:var(--soft);border-radius:4px;">ESを生成すると、ここに自動で履歴が溜まります。</div>';
+    return;
+  }
+  c.innerHTML = list.slice(0, 50).map(h => {
+    const ind = findIndustry(h.industry);
+    return `
+      <div class="lib-card">
+        <div class="title">${escapeHtmlSafe(h.label || '無題')} <span style="color:var(--sub);font-size:11px;font-weight:normal;">${ind ? ind.label : ''}</span></div>
+        <div class="meta">
+          ${new Date(h.createdAt).toLocaleString('ja-JP')}
+        </div>
+        <div class="actions">
+          <button class="primary" onclick="viewHistoryItem('${h.id}')">表示</button>
+          <button onclick="rebuildFromHistory('${h.id}')">別業界版を作る</button>
+          <button onclick="renameHistory('${h.id}')">ラベル変更</button>
+          <button class="danger" onclick="deleteHistoryItem('${h.id}')">削除</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// 保存済み経験を使う
+window.useExperienceFromLib = function(expId) {
+  const list = loadExperiences();
+  const exp = list.find(e => e.id === expId);
+  if (!exp) return;
+
+  state.experience = exp.experienceCategory;
+  state.inputs = { ...exp.inputs };
+  state.currentExpId = expId;
+
+  // 経験カテゴリのカード選択を反映
+  $$('#opts-experience .option').forEach(o => o.classList.remove('selected'));
+  const expBtn = Array.from($$('#opts-experience .option')).find(b => b.querySelector('strong')?.textContent === EXPERIENCES.find(e => e.id === exp.experienceCategory)?.label);
+  if (expBtn) expBtn.classList.add('selected');
+
+  // Stage IV のフォームに値を埋める
+  ['conclusion','motive','goal','gap','cause','action','result'].forEach(k => {
+    const el = document.getElementById('in-' + k);
+    if (el) el.value = exp.inputs[k] || '';
+  });
+
+  // ES作成モードに戻し、Stage 1 から始める（業界を選んでもらう）
+  switchMode('create');
+  state.step = 1;
+  goToStep(1);
+  showToast(`「${exp.title}」を読み込みました。業界・成果セグメントを選んで生成してください`);
+};
+
+window.viewExperienceDetail = function(expId) {
+  const exp = loadExperiences().find(e => e.id === expId);
+  if (!exp) return;
+  const labels = {conclusion:'結論',motive:'動機',goal:'目標',gap:'ギャップ',cause:'原因',action:'施策',result:'結果'};
+  const rows = Object.entries(labels).map(([k,l]) => `<div style="margin-bottom:8px;"><strong style="color:var(--accent);">${l}:</strong> ${escapeHtmlSafe(exp.inputs[k] || '(未入力)')}</div>`).join('');
+  document.getElementById('modal-area').innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this) closeModal()">
+      <div class="modal">
+        <button class="close" onclick="closeModal()">×</button>
+        <h3>${escapeHtmlSafe(exp.title)}</h3>
+        ${rows}
+        <div class="btn-row">
+          <button class="btn" onclick="closeModal(); useExperienceFromLib('${exp.id}')">この経験で新規ES作成</button>
+          <button class="btn secondary" onclick="closeModal()">閉じる</button>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+window.deleteExperience = function(expId) {
+  if (!confirm('この経験を削除しますか？関連する履歴は残ります。')) return;
+  saveExperiences(loadExperiences().filter(e => e.id !== expId));
+  renderExperienceList();
+  showToast('削除しました');
+};
+
+window.viewHistoryItem = function(histId) {
+  const h = loadHistory().find(x => x.id === histId);
+  if (!h) return;
+  const ind = findIndustry(h.industry);
+  let activeLen = 400;
+  const renderEs = () => {
+    document.getElementById('hist-es-body').textContent = h.es[activeLen] || '(空)';
+    document.querySelectorAll('#hist-modal .es-tab').forEach(t => t.classList.toggle('active', +t.dataset.len === activeLen));
+  };
+  document.getElementById('modal-area').innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this) closeModal()">
+      <div class="modal history-detail" id="hist-modal">
+        <button class="close" onclick="closeModal()">×</button>
+        <h3>${escapeHtmlSafe(h.label || '無題')}</h3>
+        <div style="color:var(--sub);font-size:12px;margin-bottom:14px;">${ind ? ind.label : ''} ・ ${new Date(h.createdAt).toLocaleString('ja-JP')}</div>
+        <div class="es-tabs">
+          ${[200,400,600,800].map(l => `<button class="es-tab" data-len="${l}" onclick="window._switchHistLen(${l})">${l}字</button>`).join('')}
+        </div>
+        <div class="es-body" id="hist-es-body"></div>
+        <div class="btn-row">
+          <button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('hist-es-body').textContent); showToast('コピーしました');">本文をコピー</button>
+          <button class="btn secondary" onclick="closeModal()">閉じる</button>
+        </div>
+      </div>
+    </div>
+  `;
+  window._switchHistLen = len => { activeLen = len; renderEs(); };
+  renderEs();
+};
+
+window.rebuildFromHistory = function(histId) {
+  const h = loadHistory().find(x => x.id === histId);
+  if (!h) return;
+  const exp = loadExperiences().find(e => e.id === h.experienceId);
+  if (!exp) { showError('この履歴の元となった経験が見つかりません'); return; }
+  // Load experience and switch to create mode (user picks new industry)
+  useExperienceFromLib(exp.id);
+};
+
+window.renameHistory = function(histId) {
+  const list = loadHistory();
+  const h = list.find(x => x.id === histId);
+  if (!h) return;
+  const newLabel = prompt('新しいラベル', h.label || '');
+  if (newLabel === null) return;
+  h.label = newLabel;
+  saveHistory(list);
+  renderHistoryList();
+  showToast('ラベルを変更しました');
+};
+
+window.deleteHistoryItem = function(histId) {
+  if (!confirm('この履歴を削除しますか？')) return;
+  saveHistory(loadHistory().filter(h => h.id !== histId));
+  renderHistoryList();
+  showToast('削除しました');
+};
+
+window.closeModal = function() { document.getElementById('modal-area').innerHTML = ''; };
+
+// プロフィール編集モーダル
+document.getElementById('btn-edit-profile').onclick = () => {
+  const p = loadProfile();
+  document.getElementById('modal-area').innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this) closeModal()">
+      <div class="modal">
+        <button class="close" onclick="closeModal()">×</button>
+        <h3>プロフィールを編集</h3>
+        <p style="color:var(--sub);font-size:12px;margin:-8px 0 14px;">全ES生成に自動反映されます</p>
+        <div class="field">
+          <label>名前</label>
+          <input type="text" id="pf-name" value="${escapeHtmlSafe(p.name || '')}">
+        </div>
+        <div class="field row">
+          <div class="col">
+            <label>大学</label>
+            <input type="text" id="pf-university" value="${escapeHtmlSafe(p.university || '')}" placeholder="○○大学">
+          </div>
+          <div class="col">
+            <label>学部</label>
+            <input type="text" id="pf-faculty" value="${escapeHtmlSafe(p.faculty || '')}" placeholder="○○学部">
+          </div>
+        </div>
+        <div class="field">
+          <label>卒業年</label>
+          <input type="text" id="pf-grad" value="${escapeHtmlSafe(p.graduateYear || '')}" placeholder="2027">
+        </div>
+        <div class="field">
+          <label>志望業界<span class="opt">カンマ区切り</span></label>
+          <input type="text" id="pf-industries" value="${escapeHtmlSafe((p.preferredIndustries || []).join(', '))}" placeholder="戦略コンサル, 広告, IT">
+        </div>
+        <div class="field">
+          <label>自分の強み<span class="opt">任意</span></label>
+          <textarea id="pf-strengths" rows="2" placeholder="論理思考、巻き込み力など">${escapeHtmlSafe(p.strengths || '')}</textarea>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="pf-save-btn">保存</button>
+          <button class="btn secondary" onclick="closeModal()">キャンセル</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('pf-save-btn').onclick = () => {
+    saveProfileData({
+      name: document.getElementById('pf-name').value.trim(),
+      university: document.getElementById('pf-university').value.trim(),
+      faculty: document.getElementById('pf-faculty').value.trim(),
+      graduateYear: document.getElementById('pf-grad').value.trim(),
+      preferredIndustries: document.getElementById('pf-industries').value.split(',').map(s => s.trim()).filter(Boolean),
+      strengths: document.getElementById('pf-strengths').value.trim()
+    });
+    closeModal();
+    renderProfileDisplay();
+    showToast('プロフィールを保存しました');
+  };
+};
+
+// データ管理: エクスポート・インポート・全削除
+document.getElementById('btn-export-data').onclick = () => {
+  const data = {
+    profile: loadProfile(),
+    experiences: loadExperiences(),
+    history: loadHistory(),
+    exportedAt: new Date().toISOString(),
+    version: 1,
+    app: 'es-forge'
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `es-forge-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('JSONをダウンロードしました');
+};
+document.getElementById('btn-import-data').onclick = () => document.getElementById('import-file-input').click();
+document.getElementById('import-file-input').onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.app !== 'es-forge') {
+        if (!confirm('ES Forge 以外のJSONかもしれません。続行しますか？')) return;
+      }
+      const ec = (data.experiences || []).length;
+      const hc = (data.history || []).length;
+      if (!confirm(`現在のデータが上書きされます。続行しますか？\n経験: ${ec}件、履歴: ${hc}件、プロフィール: ${data.profile?.name ? 'あり' : 'なし'}`)) return;
+      if (data.profile) saveProfileData(data.profile);
+      if (data.experiences) saveExperiences(data.experiences);
+      if (data.history) saveHistory(data.history);
+      renderLibrary();
+      showToast('インポート完了');
+    } catch (e) {
+      showError('JSON読み込み失敗: ' + e.message);
+    }
+  };
+  reader.readAsText(file);
+};
+document.getElementById('btn-clear-all').onclick = () => {
+  if (!confirm('全データ（経験・履歴・プロフィール）を削除します。元に戻せません。続行しますか？')) return;
+  if (!confirm('本当に削除しますか？（最終確認）')) return;
+  localStorage.removeItem(ESF_PROFILE);
+  localStorage.removeItem(ESF_EXPERIENCES);
+  localStorage.removeItem(ESF_HISTORY);
+  renderLibrary();
+  showToast('全データを削除しました');
+};
+
+// 自動保存: ES生成完了時に呼ぶ
+function autoSaveAfterGeneration() {
+  if (!state.skeleton || !state.inputs) return;
+
+  // 1. 経験を保存または更新
+  let experiences = loadExperiences();
+  let expId = state.currentExpId;
+  if (!expId) {
+    const title = (state.inputs.conclusion || '無題の経験').substring(0, 40);
+    const newExp = {
+      id: genId('exp'),
+      title,
+      experienceCategory: state.experience,
+      inputs: { ...state.inputs },
+      createdAt: Date.now(),
+      usedCount: 1
+    };
+    experiences.unshift(newExp);
+    expId = newExp.id;
+    state.currentExpId = expId;
+  } else {
+    const exp = experiences.find(e => e.id === expId);
+    if (exp) {
+      exp.usedCount = (exp.usedCount || 0) + 1;
+      exp.inputs = { ...state.inputs };  // 編集を反映
+    }
+  }
+  saveExperiences(experiences);
+
+  // 2. 履歴を保存
+  let history = loadHistory();
+  const newHist = {
+    id: genId('es'),
+    experienceId: expId,
+    industry: state.industry,
+    segment: state.segment,
+    skeleton: state.skeleton,
+    es: { ...state.results },
+    label: '',
+    createdAt: Date.now()
+  };
+  history.unshift(newHist);
+  state.currentHistoryId = newHist.id;
+  saveHistory(history);
+}
+
+// 履歴ラベルの保存（生成画面で入力したラベル）
+const labelInput = document.getElementById('history-label');
+if (labelInput) {
+  labelInput.addEventListener('change', () => {
+    if (!state.currentHistoryId) return;
+    const list = loadHistory();
+    const h = list.find(x => x.id === state.currentHistoryId);
+    if (h) {
+      h.label = labelInput.value.trim();
+      saveHistory(list);
+      showToast('ラベルを保存しました');
+    }
+  });
+}
+
+// Stage IV に入る前に「保存済み経験」ドロップダウンを populate
+function populateSavedExperiencesDropdown() {
+  const exps = loadExperiences();
+  const row = document.getElementById('use-saved-row');
+  const sel = document.getElementById('use-saved-exp');
+  if (exps.length === 0) {
+    row.style.display = 'none';
+    return;
+  }
+  row.style.display = 'block';
+  sel.innerHTML = '<option value="">— 新規入力 —</option>' + exps.map(e => `<option value="${e.id}">${escapeHtmlSafe(e.title)}（${EXPERIENCES.find(c => c.id === e.experienceCategory)?.label || ''}）</option>`).join('');
+  sel.onchange = () => {
+    const expId = sel.value;
+    if (!expId) {
+      // クリア
+      ['conclusion','motive','goal','gap','cause','action','result'].forEach(k => {
+        const el = document.getElementById('in-' + k);
+        if (el) el.value = '';
+      });
+      state.currentExpId = null;
+      return;
+    }
+    const exp = exps.find(x => x.id === expId);
+    if (!exp) return;
+    ['conclusion','motive','goal','gap','cause','action','result'].forEach(k => {
+      const el = document.getElementById('in-' + k);
+      if (el) el.value = exp.inputs[k] || '';
+    });
+    state.currentExpId = expId;
+    showToast(`「${exp.title}」の入力を読み込みました`);
+  };
+}
+
+// goToStep を hook して Stage IV のときにドロップダウンを更新
+const _originalGoToStep = goToStep;
+goToStep = function(n) {
+  _originalGoToStep(n);
+  if (n === 4) populateSavedExperiencesDropdown();
+};
+
+// 初期化
+renderProfileDisplay();
 </script>
 </body>
 </html>
