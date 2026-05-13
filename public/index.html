@@ -481,6 +481,101 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
   color: var(--sub);
 }
 
+/* 私の傾向分析（C1） */
+.insights-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.insights-stat-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 14px 16px;
+  text-align: center;
+}
+.insights-stat-card .num {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1.2;
+}
+.insights-stat-card .label {
+  font-size: 11px;
+  color: var(--sub);
+  margin-top: 2px;
+}
+
+.industry-coverage {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.industry-coverage .ic-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+.industry-coverage .ic-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--soft);
+  border-radius: 3px;
+  margin: 0 12px;
+  overflow: hidden;
+}
+.industry-coverage .ic-bar .ic-fill {
+  height: 100%;
+  background: var(--accent);
+}
+.industry-coverage .ic-name { min-width: 100px; color: var(--ink); }
+.industry-coverage .ic-count { min-width: 40px; text-align: right; color: var(--sub); }
+
+.ai-insight-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent-2);
+  border-radius: 0 4px 4px 0;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+}
+.ai-insight-card .insight-title {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+.ai-insight-card .insight-body {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--ink);
+}
+.ai-insight-card ul { margin: 4px 0 0; padding-left: 20px; }
+.ai-insight-card li { margin-bottom: 4px; }
+
+/* SNSシェア（F1） */
+.share-preview-img {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  margin: 12px auto;
+  display: block;
+}
+.share-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 /* 履歴詳細用 */
 .history-detail .es-tabs {
   display: flex;
@@ -683,6 +778,7 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
     <div class="result-actions">
       <button id="btn-copy">本文をコピー</button>
       <button id="btn-refine-toggle">🔁 壁打ちで改善</button>
+      <button id="btn-share-image">📲 SNS用画像でシェア</button>
       <button id="btn-download">全4種をテキスト保存</button>
       <button id="btn-restart">最初からやり直す</button>
     </div>
@@ -719,6 +815,17 @@ h1 .amp { color: var(--accent-2); margin: 0 6px; font-style: italic; }
     <div class="btn-row" style="margin-top:10px;">
       <button class="btn secondary small" id="btn-edit-profile">プロフィール編集</button>
     </div>
+  </div>
+
+  <div class="library-section">
+    <h3 class="lib-section-title">📊 私の傾向</h3>
+    <p class="lib-section-desc">履歴を分析して、強み・弱点・次のアクションを可視化します</p>
+    <div class="insights-stats" id="insights-stats"></div>
+    <div id="industry-coverage-area"></div>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn secondary small" id="btn-analyze-insights">🤖 AIで傾向を深掘り分析</button>
+    </div>
+    <div id="ai-insights-area" style="margin-top:14px;"></div>
   </div>
 
   <div class="library-section">
@@ -2166,6 +2273,298 @@ goToStep = function(n) {
   _originalGoToStep(n);
   if (n === 4) populateSavedExperiencesDropdown();
 };
+
+// ============================================================
+// C1: 私の傾向分析
+// ============================================================
+
+function renderInsightsBasicStats() {
+  const exps = loadExperiences();
+  const hist = loadHistory();
+  const uniqueIndustries = new Set(hist.map(h => h.industry)).size;
+
+  // 業界別生成回数
+  const industryCount = {};
+  hist.forEach(h => {
+    industryCount[h.industry] = (industryCount[h.industry] || 0) + 1;
+  });
+
+  // 統計カード
+  document.getElementById('insights-stats').innerHTML = `
+    <div class="insights-stat-card"><div class="num">${hist.length}</div><div class="label">生成ES数</div></div>
+    <div class="insights-stat-card"><div class="num">${exps.length}</div><div class="label">登録経験数</div></div>
+    <div class="insights-stat-card"><div class="num">${uniqueIndustries}</div><div class="label">カバー業界数</div></div>
+    <div class="insights-stat-card"><div class="num">${hist.length > 0 ? Math.round(hist.length / Math.max(exps.length, 1) * 10) / 10 : 0}</div><div class="label">経験あたり生成数</div></div>
+  `;
+
+  // 業界カバレッジバー
+  const coverageArea = document.getElementById('industry-coverage-area');
+  if (Object.keys(industryCount).length === 0) {
+    coverageArea.innerHTML = '<div style="color:var(--sub);font-size:13px;padding:14px;background:var(--soft);border-radius:4px;">まだESを生成していません。ES作成モードで1本作ると、ここに統計が表示されます。</div>';
+  } else {
+    const sorted = Object.entries(industryCount).sort((a, b) => b[1] - a[1]);
+    const maxCount = sorted[0][1];
+    coverageArea.innerHTML = '<div class="industry-coverage"><div style="color:var(--sub);font-size:11px;margin-bottom:8px;">業界別生成回数</div>' + sorted.slice(0, 8).map(([id, cnt]) => {
+      const ind = findIndustry(id);
+      return `<div class="ic-row">
+        <span class="ic-name">${escapeHtmlSafe(ind ? ind.label : id)}</span>
+        <span class="ic-bar"><span class="ic-fill" style="width:${cnt / maxCount * 100}%;"></span></span>
+        <span class="ic-count">${cnt}本</span>
+      </div>`;
+    }).join('') + '</div>';
+  }
+}
+
+// AI 傾向分析
+async function analyzeInsightsWithAI() {
+  const exps = loadExperiences();
+  const hist = loadHistory();
+
+  if (hist.length < 2) {
+    showError('AI分析には少なくとも2本のES履歴が必要です。');
+    return;
+  }
+
+  const btn = document.getElementById('btn-analyze-insights');
+  btn.disabled = true;
+  btn.textContent = '🤖 分析中…';
+
+  // データ圧縮: 全履歴を渡すとトークン消費が大きい → メタ情報 + サンプル本文
+  const historyMeta = hist.slice(0, 30).map(h => ({
+    industry: findIndustry(h.industry)?.label || h.industry,
+    label: h.label || '無題',
+    date: new Date(h.createdAt).toLocaleDateString('ja-JP')
+  }));
+  const sampleText = hist[0]?.es?.['400'] || hist[0]?.es?.['200'] || '';
+
+  const prompt = `あなたはES添削の超プロです。ある就活生の過去の生成履歴から、その人の「強み・弱点・次のアクション」を分析してください。
+
+【生成履歴（${hist.length}本）】
+${JSON.stringify(historyMeta, null, 2)}
+
+【登録経験（${exps.length}個）】
+${JSON.stringify(exps.map(e => ({ title: e.title, category: e.experienceCategory, usedCount: e.usedCount })), null, 2)}
+
+【サンプルES（最新の400字版）】
+${sampleText}
+
+【分析の観点】
+- 業界カバレッジ：偏りはあるか、足りない業界は
+- 経験の活用度：使い回せている経験 vs 一度きりの経験
+- 構造の特徴：論理パターン・好む語彙・抜け落ちがちな要素
+- 次のアクション：何を強化・補完すべきか
+
+【出力JSON】（コードフェンス禁止）
+{
+  "strengths": ["強み1（具体的に）", "強み2", "強み3"],
+  "weaknesses": ["弱点1（具体的に）", "弱点2", "弱点3"],
+  "patterns": ["傾向1（業界・構造・表現など）", "傾向2", "傾向3"],
+  "recommendations": ["次のアクション1（具体的・実行可能）", "次のアクション2", "次のアクション3"]
+}
+
+JSONのみを出力してください。`;
+
+  try {
+    const r = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, mode: 'skeleton' })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'API error');
+    const parsed = parseJsonRobust(data.text);
+    renderAIInsights(parsed);
+  } catch (e) {
+    showError('分析エラー: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🤖 AIで傾向を再分析';
+  }
+}
+
+function renderAIInsights(insights) {
+  const area = document.getElementById('ai-insights-area');
+  const cards = [
+    { key: 'strengths', title: '💪 あなたの強み', items: insights.strengths },
+    { key: 'patterns', title: '📈 見えてきた傾向', items: insights.patterns },
+    { key: 'weaknesses', title: '⚠️ 弱点・改善ポイント', items: insights.weaknesses },
+    { key: 'recommendations', title: '🚀 次のアクション', items: insights.recommendations }
+  ];
+  area.innerHTML = cards.map(c => c.items && c.items.length ? `
+    <div class="ai-insight-card">
+      <div class="insight-title">${c.title}</div>
+      <div class="insight-body"><ul>${c.items.map(i => `<li>${escapeHtmlSafe(i)}</li>`).join('')}</ul></div>
+    </div>
+  ` : '').join('');
+}
+
+document.getElementById('btn-analyze-insights').onclick = analyzeInsightsWithAI;
+
+// 既存の renderLibrary をフック: insights も同時に更新
+const _origRenderLibrary = renderLibrary;
+renderLibrary = function() {
+  _origRenderLibrary();
+  renderInsightsBasicStats();
+};
+
+// ============================================================
+// F1: SNSシェア画像生成（Canvas）
+// ============================================================
+
+function buildShareImage(esText, industryLabel, length) {
+  const W = 1080, H = 1080;  // Instagram スクエア
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // 背景（クリーム）
+  ctx.fillStyle = '#f5f1ea';
+  ctx.fillRect(0, 0, W, H);
+
+  // 装飾枠（薄い）
+  ctx.strokeStyle = '#d8d2c5';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(40, 40, W - 80, H - 80);
+
+  // ロゴ「ES & Forge」
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = 'bold 56px "Hiragino Mincho ProN", serif';
+  ctx.fillText('ES', 90, 130);
+  ctx.fillStyle = '#b08968';
+  ctx.font = 'italic 56px "Hiragino Mincho ProN", serif';
+  ctx.fillText('&', 175, 130);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = 'bold 56px "Hiragino Mincho ProN", serif';
+  ctx.fillText('Forge', 230, 130);
+
+  // 業界＋文字数バッジ
+  ctx.fillStyle = '#2d4a3e';
+  ctx.font = 'bold 28px "Hiragino Kaku Gothic ProN", sans-serif';
+  ctx.fillText(`${industryLabel} ／ ${length}字版`, 90, 200);
+
+  // 区切り線
+  ctx.strokeStyle = '#b08968';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(90, 240);
+  ctx.lineTo(280, 240);
+  ctx.stroke();
+
+  // 本文（折り返し描画）
+  ctx.fillStyle = '#1a1a1a';
+  ctx.font = '34px "Hiragino Mincho ProN", serif';
+  const maxWidth = W - 180;
+  const lineHeight = 56;
+  let y = 320;
+  const maxLines = 13;
+  const lines = wrapJapaneseText(ctx, esText, maxWidth);
+  for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
+    let line = lines[i];
+    if (i === maxLines - 1 && lines.length > maxLines) {
+      line = line.slice(0, -1) + '…';
+    }
+    ctx.fillText(line, 90, y);
+    y += lineHeight;
+  }
+
+  // フッター
+  ctx.fillStyle = '#5a5a5a';
+  ctx.font = '24px "Hiragino Kaku Gothic ProN", sans-serif';
+  ctx.fillText('業界別ガクチカ自動生成', 90, H - 130);
+  ctx.fillStyle = '#2d4a3e';
+  ctx.font = 'bold 28px "Hiragino Kaku Gothic ProN", sans-serif';
+  ctx.fillText('es-forge.vercel.app', 90, H - 90);
+
+  return canvas;
+}
+
+// 日本語テキストを文字単位で折り返し（半角/全角混在対応）
+function wrapJapaneseText(ctx, text, maxWidth) {
+  const lines = [];
+  let current = '';
+  for (const ch of text) {
+    const test = current + ch;
+    if (ctx.measureText(test).width > maxWidth && current !== '') {
+      lines.push(current);
+      current = ch;
+    } else {
+      current = test;
+    }
+    if (ch === '\n') {
+      lines.push(current);
+      current = '';
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+// シェアモーダル
+function openShareModal() {
+  const len = state.activeTab;
+  const text = state.results[len];
+  if (!text) { showError('生成結果が空です'); return; }
+  const ind = findIndustry(state.industry);
+  const industryLabel = ind ? ind.label : '一般';
+
+  const canvas = buildShareImage(text, industryLabel, len);
+  const dataUrl = canvas.toDataURL('image/png');
+
+  document.getElementById('modal-area').innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this) closeModal()">
+      <div class="modal">
+        <button class="close" onclick="closeModal()">×</button>
+        <h3>📲 SNSでシェア</h3>
+        <p style="color:var(--sub);font-size:12px;margin:-8px 0 12px;">${industryLabel} ／ ${len}字版を画像化しました</p>
+        <img class="share-preview-img" src="${dataUrl}" alt="ES画像プレビュー">
+        <div class="share-actions">
+          <button class="btn" onclick="downloadShareImage('${len}', '${escapeHtmlSafe(industryLabel)}')">💾 画像をダウンロード</button>
+          <button class="btn secondary" id="btn-share-native">📤 シェア（モバイル）</button>
+          <button class="btn secondary" onclick="closeModal()">閉じる</button>
+        </div>
+        <p style="color:var(--sub);font-size:11px;margin-top:14px;text-align:center;">画像にes-forge.vercel.appが入っているので、シェアするとES Forgeも自然に広がります</p>
+      </div>
+    </div>
+  `;
+
+  // Web Share API（モバイル）
+  document.getElementById('btn-share-native').onclick = async () => {
+    canvas.toBlob(async blob => {
+      if (!blob) return;
+      const file = new File([blob], `es-forge-${len}.png`, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `私のES ${len}字版`,
+            text: `ES Forge（${industryLabel}）で生成 #就活`
+          });
+        } catch (e) { /* ユーザーがキャンセル */ }
+      } else {
+        showError('このブラウザは直接シェアに非対応です。「ダウンロード」してから手動投稿してください');
+      }
+    });
+  };
+}
+
+window.downloadShareImage = function(len, industryLabel) {
+  const text = state.results[len];
+  if (!text) return;
+  const canvas = buildShareImage(text, industryLabel, +len);
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `es-forge-${industryLabel}-${len}字.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('画像をダウンロードしました');
+  });
+};
+
+document.getElementById('btn-share-image').onclick = openShareModal;
 
 // 初期化
 renderProfileDisplay();
