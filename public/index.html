@@ -2405,17 +2405,10 @@ function renderAIInsights(insights) {
   ` : '').join('');
 }
 
-// 堅牢化: 要素null時のエラーで後続処理が止まらないように
-function bindClick(id, handler) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.onclick = handler;
-    console.log('[bindClick] bound', id);
-  } else {
-    console.warn('[bindClick] element not found:', id);
-  }
-}
-bindClick('btn-analyze-insights', analyzeInsightsWithAI);
+// ⚡ ESF v3 - イベントデリゲーション方式（document全体でクリック監視）
+// 直接バインドより堅牢: 要素の追加/削除や hidden 状態に左右されない
+console.log('[ESF v3] script loaded, setting up event delegation');
+window.__ESF_VERSION__ = 'v3-' + new Date().toISOString().slice(0, 10);
 
 // 既存の renderLibrary をフック: insights も同時に更新
 const _origRenderLibrary = renderLibrary;
@@ -2619,7 +2612,44 @@ window.downloadShareImage = function(len, industryLabel) {
   });
 };
 
-bindClick('btn-share-image', openShareModal);
+// 🎯 document-levelデリゲーション（最も堅牢）
+document.addEventListener('click', function(e) {
+  const target = e.target;
+  // closest で、子要素クリックも親IDで拾える
+  const insightsBtn = target.closest('#btn-analyze-insights');
+  const shareBtn = target.closest('#btn-share-image');
+
+  if (insightsBtn) {
+    console.log('[delegation] btn-analyze-insights clicked');
+    e.preventDefault();
+    e.stopPropagation();
+    try { analyzeInsightsWithAI(); } catch (err) {
+      console.error(err);
+      alert('AI傾向分析エラー: ' + err.message);
+    }
+    return;
+  }
+  if (shareBtn) {
+    console.log('[delegation] btn-share-image clicked');
+    e.preventDefault();
+    e.stopPropagation();
+    try { openShareModal(); } catch (err) {
+      console.error(err);
+      alert('シェアモーダルエラー: ' + err.message);
+    }
+    return;
+  }
+});
+
+// ページ右上にバージョン表示（キャッシュ問題の切り分け用）
+(function showVersion() {
+  const v = document.createElement('div');
+  v.style.cssText = 'position:fixed;bottom:8px;right:8px;background:#000;color:#0f0;font-family:monospace;font-size:10px;padding:2px 6px;border-radius:3px;z-index:9999;opacity:0.7;pointer-events:none;';
+  v.textContent = window.__ESF_VERSION__ || 'unknown';
+  document.body.appendChild(v);
+})();
+
+console.log('[ESF v3] delegation handlers attached');
 
 // 初期化
 renderProfileDisplay();
