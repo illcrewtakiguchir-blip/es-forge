@@ -2317,17 +2317,22 @@ function renderInsightsBasicStats() {
 
 // AI 傾向分析
 async function analyzeInsightsWithAI() {
+  console.log('[analyzeInsightsWithAI] called');
+  showToast('AI分析を開始します…');
+
   const exps = loadExperiences();
   const hist = loadHistory();
 
   if (hist.length < 2) {
-    showError('AI分析には少なくとも2本のES履歴が必要です。');
+    alert(`AI分析には履歴が2本以上必要です（現在 ${hist.length} 本）。\n「ES作成」モードで2本以上ES生成してから再度お試しください。`);
     return;
   }
 
   const btn = document.getElementById('btn-analyze-insights');
   btn.disabled = true;
   btn.textContent = '🤖 分析中…';
+  // 分析結果エリアまでスクロール
+  document.getElementById('ai-insights-area').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   // データ圧縮: 全履歴を渡すとトークン消費が大きい → メタ情報 + サンプル本文
   const historyMeta = hist.slice(0, 30).map(h => ({
@@ -2374,8 +2379,10 @@ JSONのみを出力してください。`;
     if (!r.ok) throw new Error(data.error || 'API error');
     const parsed = parseJsonRobust(data.text);
     renderAIInsights(parsed);
+    showToast('AI分析完了');
   } catch (e) {
-    showError('分析エラー: ' + e.message);
+    console.error('Insights error:', e);
+    alert('分析エラー: ' + (e.message || e));
   } finally {
     btn.disabled = false;
     btn.textContent = '🤖 AIで傾向を再分析';
@@ -2398,7 +2405,17 @@ function renderAIInsights(insights) {
   ` : '').join('');
 }
 
-document.getElementById('btn-analyze-insights').onclick = analyzeInsightsWithAI;
+// 堅牢化: 要素null時のエラーで後続処理が止まらないように
+function bindClick(id, handler) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.onclick = handler;
+    console.log('[bindClick] bound', id);
+  } else {
+    console.warn('[bindClick] element not found:', id);
+  }
+}
+bindClick('btn-analyze-insights', analyzeInsightsWithAI);
 
 // 既存の renderLibrary をフック: insights も同時に更新
 const _origRenderLibrary = renderLibrary;
@@ -2500,52 +2517,90 @@ function wrapJapaneseText(ctx, text, maxWidth) {
   return lines;
 }
 
-// シェアモーダル
+// シェアモーダル（X/LINE Web Intent + 画像DL + モバイル直シェア）
 function openShareModal() {
-  const len = state.activeTab;
-  const text = state.results[len];
-  if (!text) { showError('生成結果が空です'); return; }
-  const ind = findIndustry(state.industry);
-  const industryLabel = ind ? ind.label : '一般';
+  console.log('[openShareModal] called', { activeTab: state.activeTab, results: Object.keys(state.results || {}) });
+  showToast('シェア準備中…');
 
-  const canvas = buildShareImage(text, industryLabel, len);
-  const dataUrl = canvas.toDataURL('image/png');
+  try {
+    const len = state.activeTab;
+    const text = state.results && state.results[len];
+    if (!text || text.length < 10) {
+      alert('まずESを生成してください。\n（業界→経験→成果→入力→生成 のフローを完了させてから再度押してください）');
+      return;
+    }
+    const ind = findIndustry(state.industry);
+    const industryLabel = ind ? ind.label : '一般';
 
-  document.getElementById('modal-area').innerHTML = `
-    <div class="modal-bg" onclick="if(event.target===this) closeModal()">
-      <div class="modal">
-        <button class="close" onclick="closeModal()">×</button>
-        <h3>📲 SNSでシェア</h3>
-        <p style="color:var(--sub);font-size:12px;margin:-8px 0 12px;">${industryLabel} ／ ${len}字版を画像化しました</p>
-        <img class="share-preview-img" src="${dataUrl}" alt="ES画像プレビュー">
-        <div class="share-actions">
-          <button class="btn" onclick="downloadShareImage('${len}', '${escapeHtmlSafe(industryLabel)}')">💾 画像をダウンロード</button>
-          <button class="btn secondary" id="btn-share-native">📤 シェア（モバイル）</button>
-          <button class="btn secondary" onclick="closeModal()">閉じる</button>
+    const canvas = buildShareImage(text, industryLabel, len);
+    const dataUrl = canvas.toDataURL('image/png');
+
+    // Twitter Web Intent text
+    const tweetText = `ES Forgeで${industryLabel}向けのガクチカ作ってみた ✍️\n${len}字でサクッと完成。\n業界別トーン辞書でリアルに化ける👇\n\n#就活 #ES添削 #ガクチカ #26卒 #27卒`;
+    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent('https://es-forge.vercel.app')}`;
+
+    // LINE Web Intent
+    const lineText = `ES Forgeでガクチカ作れたよ！\n業界別に最適化されたAI生成だから精度高い\nhttps://es-forge.vercel.app`;
+    const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(lineText)}`;
+
+    document.getElementById('modal-area').innerHTML = `
+      <div class="modal-bg" onclick="if(event.target===this) closeModal()">
+        <div class="modal" style="max-width:580px;">
+          <button class="close" onclick="closeModal()">×</button>
+          <h3>📲 SNSでシェア</h3>
+          <p style="color:var(--sub);font-size:12px;margin:-8px 0 14px;">${industryLabel} ／ ${len}字版</p>
+
+          <img class="share-preview-img" src="${dataUrl}" alt="ES画像" style="max-width:340px;">
+
+          <div style="background:var(--soft);padding:12px 14px;border-radius:4px;margin-top:14px;font-size:12px;color:var(--ink);line-height:1.7;">
+            <strong>📝 シェアの流れ</strong><br>
+            1. 下の「画像ダウンロード」を押す<br>
+            2. 「X でポストする」か「LINE でシェア」を押す<br>
+            3. 投稿画面で <strong>ダウンロードした画像を添付</strong>して投稿
+          </div>
+
+          <div class="share-actions" style="margin-top:14px;">
+            <button class="btn" id="modal-dl-btn">💾 画像をダウンロード</button>
+            <button class="btn secondary" id="modal-copy-btn">📋 本文＋紹介文をコピー</button>
+          </div>
+
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);">
+            <p style="color:var(--sub);font-size:12px;text-align:center;margin:0 0 10px;">SNSに投稿（テキスト自動入力）</p>
+            <div class="share-actions">
+              <a class="btn" href="${tweetUrl}" target="_blank" rel="noopener" style="text-decoration:none;background:#000;border-color:#000;">𝕏 でポストする</a>
+              <a class="btn" href="${lineUrl}" target="_blank" rel="noopener" style="text-decoration:none;background:#06C755;border-color:#06C755;">LINE でシェア</a>
+            </div>
+          </div>
+
+          <button class="btn secondary" onclick="closeModal()" style="margin-top:14px;width:100%;">閉じる</button>
+
+          <p style="color:var(--sub);font-size:10px;margin-top:14px;text-align:center;line-height:1.6;">※ X・LINEの仕様上、画像はリンクから自動添付できません。<br>ダウンロード→手動添付してください</p>
         </div>
-        <p style="color:var(--sub);font-size:11px;margin-top:14px;text-align:center;">画像にes-forge.vercel.appが入っているので、シェアするとES Forgeも自然に広がります</p>
       </div>
-    </div>
-  `;
+    `;
 
-  // Web Share API（モバイル）
-  document.getElementById('btn-share-native').onclick = async () => {
-    canvas.toBlob(async blob => {
-      if (!blob) return;
-      const file = new File([blob], `es-forge-${len}.png`, { type: 'image/png' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: `私のES ${len}字版`,
-            text: `ES Forge（${industryLabel}）で生成 #就活`
-          });
-        } catch (e) { /* ユーザーがキャンセル */ }
-      } else {
-        showError('このブラウザは直接シェアに非対応です。「ダウンロード」してから手動投稿してください');
-      }
-    });
-  };
+    // ボタンイベント（インラインonclickでパラメータ渡しすると壊れやすいので個別バインド）
+    document.getElementById('modal-dl-btn').onclick = () => {
+      canvas.toBlob(blob => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `es-forge-${industryLabel}-${len}字.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('画像をダウンロードしました');
+      });
+    };
+    document.getElementById('modal-copy-btn').onclick = () => {
+      const copyText = `${text}\n\n— ES Forge で生成（${industryLabel}・${len}字版）\nhttps://es-forge.vercel.app`;
+      navigator.clipboard.writeText(copyText).then(() => showToast('コピーしました')).catch(() => alert('コピーに失敗しました'));
+    };
+
+  } catch (e) {
+    console.error('Share error:', e);
+    alert('シェア機能エラー: ' + (e.message || e) + '\n\n（DevToolsのConsoleで詳細確認できます）');
+  }
 }
 
 window.downloadShareImage = function(len, industryLabel) {
@@ -2564,7 +2619,7 @@ window.downloadShareImage = function(len, industryLabel) {
   });
 };
 
-document.getElementById('btn-share-image').onclick = openShareModal;
+bindClick('btn-share-image', openShareModal);
 
 // 初期化
 renderProfileDisplay();
