@@ -1871,6 +1871,8 @@ function renderLibrary() {
   renderProfileDisplay();
   renderExperienceList();
   renderHistoryList();
+  // C1: 私の傾向セクションも一緒に更新（関数が存在すれば）
+  if (typeof renderInsightsBasicStats === 'function') renderInsightsBasicStats();
 }
 
 function renderProfileDisplay() {
@@ -2410,12 +2412,7 @@ function renderAIInsights(insights) {
 console.log('[ESF v3] script loaded, setting up event delegation');
 window.__ESF_VERSION__ = 'v3-' + new Date().toISOString().slice(0, 10);
 
-// 既存の renderLibrary をフック: insights も同時に更新
-const _origRenderLibrary = renderLibrary;
-renderLibrary = function() {
-  _origRenderLibrary();
-  renderInsightsBasicStats();
-};
+// renderLibrary の再代入は Chrome で TypeError になるのでフックは使わない
 
 // ============================================================
 // F1: SNSシェア画像生成（Canvas）
